@@ -33,10 +33,12 @@
                 <thead>
                     <tr>
                         <th>Title</th>
+                        <th>Category</th>
                         <th>Date</th>
                         <th>Location</th>
                         <th>Capacity</th>
                         <th>Price</th>
+                        <th>Registered</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -45,12 +47,15 @@
                     {
                         <tr>
                             <td>@ev.Title</td>
-                            <td>@ev.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>@ev.Category</td>
+                            <td>@ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                             <td>@ev.Location</td>
                             <td>@ev.Capacity</td>
                             <td>@(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")</td>
-                            <td class="d-flex gap-2">
+                            <td>@ev.Registrations.Count / @ev.Capacity</td>
+                            <td class="d-flex gap-2 flex-wrap">
                                 <a class="btn btn-sm btn-outline-primary" href="/events/@ev.Id">Details</a>
+                                <a class="btn btn-sm btn-outline-info" href="/events/@ev.Id/registrations">Registrations</a>
                                 <a class="btn btn-sm btn-outline-warning" href="/events/edit/@ev.Id">Edit</a>
                                 <a class="btn btn-sm btn-outline-danger" href="/events/delete/@ev.Id">Delete</a>
                             </td>
@@ -75,6 +80,7 @@
         if (!string.IsNullOrWhiteSpace(userId))
         {
             myEvents = await Db.Events
+                .Include(e => e.Registrations)
                 .Where(e => e.CreatorId == userId)
                 .OrderByDescending(e => e.Date)
                 .ToListAsync();

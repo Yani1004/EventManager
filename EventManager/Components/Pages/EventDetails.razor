@@ -32,10 +32,14 @@
                  alt="@eventItem.Title" />
 
             <div class="card-body p-4">
-                <h1 class="mb-3">@eventItem.Title</h1>
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <h1 class="mb-0">@eventItem.Title</h1>
+                    <span class="badge bg-light text-dark details-category-badge">@eventItem.Category</span>
+                </div>
 
-                <p class="mb-2"><strong>Date:</strong> @eventItem.Date.ToString("dd.MM.yyyy HH:mm")</p>
+                <p class="mb-2"><strong>Date:</strong> @eventItem.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</p>
                 <p class="mb-2"><strong>Location:</strong> @eventItem.Location</p>
+                <p class="mb-2"><strong>Category:</strong> @eventItem.Category</p>
                 <p class="mb-2"><strong>Capacity:</strong> @eventItem.Capacity</p>
                 <p class="mb-2"><strong>Registered:</strong> @registeredCount / @eventItem.Capacity</p>
                 <p class="mb-3"><strong>Price:</strong> @(eventItem.Price == 0 ? "Free" : $"{eventItem.Price:F2} lv.")</p>
@@ -51,12 +55,20 @@
                 }
 
                 <div class="mt-3 d-flex gap-2 flex-wrap">
-                    @if (canRegister)
+                    @if (canRegister && !isAlreadyRegistered)
                     {
                         <button class="btn btn-primary"
                                 @onclick="RegisterForEvent"
                                 disabled="@isRegistering">
                             @(isRegistering ? "Registering..." : "Register")
+                        </button>
+                    }
+
+                    @if (canRegister && isAlreadyRegistered)
+                    {
+                        <button class="btn btn-outline-danger"
+                                @onclick="CancelRegistrationFromDetails">
+                            Cancel Registration
                         </button>
                     }
 
@@ -80,6 +92,13 @@
         height: 400px;
         object-fit: cover;
     }
+
+    .details-category-badge {
+        border-radius: 999px;
+        font-weight: 500;
+        padding: 0.5rem 0.8rem;
+        white-space: nowrap;
+    }
 </style>
 
 @code {
@@ -92,6 +111,8 @@
     private bool canRegister = false;
     private bool canManageEvent = false;
     private int registeredCount = 0;
+    private bool isAlreadyRegistered = false;
+    private int? currentRegistrationId = null;
 
     private string message = string.Empty;
     private string messageCss = "alert-info";
@@ -119,6 +140,15 @@
                 if (user.IsInRole("Attendee"))
                 {
                     canRegister = true;
+
+                    var existingRegistration = await Db.Registrations
+                        .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == userId);
+
+                    if (existingRegistration != null)
+                    {
+                        isAlreadyRegistered = true;
+                        currentRegistrationId = existingRegistration.Id;
+                    }
                 }
 
                 if (user.IsInRole("EventManager") && userId == eventItem.CreatorId)
@@ -187,16 +217,20 @@
                 return;
             }
 
-            Db.Registrations.Add(new Registration
+            var registration = new Registration
             {
                 EventId = eventItem.Id,
                 UserId = userId,
                 RegisteredAt = DateTime.UtcNow
-            });
+            };
 
+            Db.Registrations.Add(registration);
             await Db.SaveChangesAsync();
 
             registeredCount++;
+            isAlreadyRegistered = true;
+            currentRegistrationId = registration.Id;
+
             message = "You successfully registered for the event.";
             messageCss = "alert-success";
         }
@@ -209,6 +243,32 @@
         {
             isRegistering = false;
         }
+    }
+
+    private async Task CancelRegistrationFromDetails()
+    {
+        if (currentRegistrationId == null || eventItem == null)
+            return;
+
+        var registration = await Db.Registrations
+            .FirstOrDefaultAsync(r => r.Id == currentRegistrationId.Value);
+
+        if (registration == null)
+        {
+            message = "Registration not found.";
+            messageCss = "alert-danger";
+            return;
+        }
+
+        Db.Registrations.Remove(registration);
+        await Db.SaveChangesAsync();
+
+        isAlreadyRegistered = false;
+        currentRegistrationId = null;
+        registeredCount--;
+
+        message = "Registration cancelled successfully.";
+        messageCss = "alert-success";
     }
 
     private void GoBack()

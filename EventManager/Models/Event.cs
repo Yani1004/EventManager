@@ -27,6 +27,7 @@ namespace EventManager.Models
         [Range(0, 100000, ErrorMessage = "Price cannot be negative.")]
         public decimal Price { get; set; }
 
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public string CreatorId { get; set; } = string.Empty;
@@ -35,5 +36,10 @@ namespace EventManager.Models
         public string? ImageUrl { get; set; }
 
         public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
+
+        [Required(ErrorMessage = "Category is required.")]
+        [StringLength(50)]
+        public string Category { get; set; } = string.Empty;
+
     }
 }

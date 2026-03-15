@@ -2,7 +2,10 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
 
+@using System.Globalization
 @using System.Security.Claims
+@using Radzen
+@using Radzen.Blazor
 @using EventManager.Data
 @using EventManager.Models
 @using Microsoft.AspNetCore.Components.Authorization
@@ -39,29 +42,45 @@
                             <div class="alert @messageCss mb-4">@message</div>
                         }
 
-                        <EditForm Model="eventModel" OnValidSubmit="HandleEditEvent">
+                        <EditForm Model="eventModel" OnValidSubmit="HandleEditEvent" FormName="editEventForm">
                             <DataAnnotationsValidator />
                             <ValidationSummary class="mb-3 text-danger" />
 
                             <div class="mb-3">
                                 <label class="form-label">Title</label>
-                                <InputText class="form-control form-control-lg" @bind-Value="eventModel.Title" />
+                                <InputText class="form-control" @bind-Value="eventModel.Title" />
                                 <ValidationMessage For="@(() => eventModel.Title)" class="text-danger" />
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Description</label>
-                                <InputTextArea class="form-control" @bind-Value="eventModel.Description" rows="5" />
+                                <InputTextArea class="form-control" @bind-Value="eventModel.Description" />
                                 <ValidationMessage For="@(() => eventModel.Description)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <InputSelect class="form-select" @bind-Value="eventModel.Category">
+                                    <option value="">Select a category</option>
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => eventModel.Category)" class="text-danger" />
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Date and Time</label>
-                                    <input class="form-control"
-                                           type="datetime-local"
-                                           value="@eventDateLocalString"
-                                           @onchange="OnDateChanged" />
+                                    <RadzenDatePicker Name="EventDateInput"
+                                                      @bind-Value="eventModel.Date"
+                                                      ShowTime="true"
+                                                      DateFormat="dd.MM.yyyy HH:mm"
+                                                      Min="@minimumEventDate"
+                                                      Culture="@englishCulture"
+                                                      Class="w-100 event-datepicker" />
+
                                     @if (!string.IsNullOrWhiteSpace(dateValidationMessage))
                                     {
                                         <div class="text-danger mt-1">@dateValidationMessage</div>
@@ -110,10 +129,9 @@
                                     </div>
 
                                     <iframe src="@googleMapsEmbedUrl"
-                                            width="100%"
                                             height="260"
-                                            style="border:0; border-radius:12px;"
-                                            allowfullscreen=""
+                                            style="border:0; border-radius:12px; width:100%;"
+                                            allowfullscreen
                                             loading="lazy">
                                     </iframe>
                                 </div>
@@ -164,11 +182,83 @@
         width: 100%;
         object-fit: cover;
     }
+
+    .create-event-card .form-control,
+    .create-event-card .form-select {
+        min-height: 48px;
+        height: 48px;
+        border: 1px solid #ced4da !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .create-event-card textarea.form-control {
+        min-height: 170px;
+        height: 170px;
+        resize: vertical;
+        padding-top: 0.9rem;
+    }
+
+    .create-event-card .form-control:focus,
+    .create-event-card .form-select:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+    }
+
+    .create-event-card .rz-datepicker {
+        width: 100%;
+        display: block;
+    }
+
+    .create-event-card .rz-inputtext {
+        width: 100%;
+        min-height: 48px !important;
+        height: 48px !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+        background-color: #fff !important;
+        color: #212529 !important;
+        font-size: 1rem;
+        padding: 0.75rem 3rem 0.75rem 1rem !important;
+    }
+
+        .create-event-card .rz-inputtext:focus,
+        .create-event-card .rz-state-focus .rz-inputtext,
+        .create-event-card .rz-datepicker:focus-within .rz-inputtext {
+            border-color: #86b7fe !important;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+            outline: none !important;
+        }
+
+    .create-event-card .rz-datepicker-trigger {
+        color: #6c757d !important;
+        background: transparent !important;
+        border: none !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .create-event-card .rz-datepicker-trigger:hover {
+            color: #495057 !important;
+            background: transparent !important;
+        }
+
+    .create-event-card .text-danger {
+        font-size: 0.92rem;
+    }
 </style>
 
 @code {
     [Parameter]
     public int Id { get; set; }
+
+    private readonly CultureInfo englishCulture = new("en-US");
 
     private Event? eventModel;
     private bool isLoading = true;
@@ -181,7 +271,19 @@
     private string googleMapsSearchUrl = string.Empty;
     private string googleMapsEmbedUrl = string.Empty;
 
-    private string eventDateLocalString = string.Empty;
+    private readonly List<string> categories = new()
+    {
+        "Conference",
+        "Workshop",
+        "Concert",
+        "Sports",
+        "Networking",
+        "Festival",
+        "Seminar",
+        "Other"
+    };
+
+    private DateTime minimumEventDate => DateTime.Now;
 
     protected override async Task OnInitializedAsync()
     {
@@ -199,15 +301,10 @@
         }
 
         eventModel = existingEvent;
-        eventDateLocalString = eventModel.Date.ToString("yyyy-MM-ddTHH:mm");
+        eventModel.Date = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
+
         UpdateMapUrl();
-
         isLoading = false;
-    }
-
-    private void OnDateChanged(ChangeEventArgs e)
-    {
-        eventDateLocalString = e.Value?.ToString() ?? string.Empty;
     }
 
     private void OnLocationChanged(ChangeEventArgs e)
@@ -235,24 +332,21 @@
 
         isSubmitting = true;
         message = string.Empty;
+        messageCss = "alert-info";
         dateValidationMessage = string.Empty;
 
         try
         {
-            if (!DateTime.TryParse(eventDateLocalString, out var parsedDate))
-            {
-                dateValidationMessage = "Please enter a valid date and time.";
-                return;
-            }
-
-            if (parsedDate <= DateTime.Now)
+            if (eventModel.Date <= DateTime.Now)
             {
                 dateValidationMessage = "Event date must be in the future.";
                 return;
             }
 
-            eventModel.Date = parsedDate;
             UpdateMapUrl();
+
+            var localEventDate = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Local);
+            eventModel.Date = localEventDate.ToUniversalTime();
 
             await Db.SaveChangesAsync();
 
@@ -262,9 +356,9 @@
             await Task.Delay(600);
             NavigationManager.NavigateTo("/my-events");
         }
-        catch
+        catch (Exception ex)
         {
-            message = "Something went wrong while updating the event.";
+            message = ex.Message;
             messageCss = "alert-danger";
         }
         finally

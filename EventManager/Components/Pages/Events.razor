@@ -8,62 +8,288 @@
 <PageTitle>Events</PageTitle>
 
 <div class="container py-4">
-    <h1 class="mb-4">Upcoming Events</h1>
+    <div class="events-header mb-4">
+        <div>
+            <h1 class="mb-1">Upcoming Events</h1>
+            <p class="text-muted mb-0">Browse events and refine the list with sorting and filters.</p>
+        </div>
+
+        <div class="events-toolbar">
+            <div class="sort-box">
+                <label class="form-label mb-1">Sort By</label>
+                <InputSelect class="form-select" @bind-Value="selectedSort">
+                    <option value="date_asc">Date: Soonest First</option>
+                    <option value="date_desc">Date: Latest First</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                </InputSelect>
+            </div>
+
+            <button class="btn btn-dark filters-toggle-btn" @onclick="ToggleFilters">
+                <span class="bi bi-funnel me-2"></span>
+                @(showFilters ? "Hide Filters" : "Filters")
+            </button>
+        </div>
+    </div>
+
+    @if (showFilters)
+    {
+        <div class="card shadow-sm border-0 filters-panel mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h5 class="mb-0">Filter Events</h5>
+
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">
+                        Clear All
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <InputSelect class="form-select" @bind-Value="selectedCategory">
+                            <option value="">All Categories</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">City / Location</label>
+                        <InputText class="form-control" @bind-Value="locationFilter" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Min Price</label>
+                        <InputNumber class="form-control" @bind-Value="minPrice" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Max Price</label>
+                        <InputNumber class="form-control" @bind-Value="maxPrice" />
+                    </div>
+                </div>
+
+                <div class="filters-bottom-row mt-4">
+                    <div class="form-check form-switch free-only-switch">
+                        <InputCheckbox class="form-check-input" id="freeOnlySwitch" @bind-Value="freeOnly" />
+                        <label class="form-check-label ms-2" for="freeOnlySwitch">
+                            Free events only
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (HasActiveFilters)
+    {
+        <div class="active-filters mb-4">
+            @if (!string.IsNullOrWhiteSpace(selectedCategory))
+            {
+                <span class="filter-chip">
+                    Category: @selectedCategory
+                    <button type="button" @onclick="ClearCategory">×</button>
+                </span>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(locationFilter))
+            {
+                <span class="filter-chip">
+                    Location: @locationFilter
+                    <button type="button" @onclick="ClearLocation">×</button>
+                </span>
+            }
+
+            @if (minPrice.HasValue)
+            {
+                <span class="filter-chip">
+                    Min: @minPrice.Value.ToString("F2") lv.
+                    <button type="button" @onclick="ClearMinPrice">×</button>
+                </span>
+            }
+
+            @if (maxPrice.HasValue)
+            {
+                <span class="filter-chip">
+                    Max: @maxPrice.Value.ToString("F2") lv.
+                    <button type="button" @onclick="ClearMaxPrice">×</button>
+                </span>
+            }
+
+            @if (freeOnly)
+            {
+                <span class="filter-chip">
+                    Free only
+                    <button type="button" @onclick="ClearFreeOnly">×</button>
+                </span>
+            }
+        </div>
+    }
 
     @if (events == null)
     {
         <p>Loading events...</p>
     }
-    else if (!events.Any())
-    {
-        <div class="alert alert-info">No events found.</div>
-    }
     else
     {
-        <div class="row g-4">
-            @foreach (var ev in events)
-            {
-                <div class="col-md-6 col-lg-4">
-                    <div class="card event-card h-100 shadow-sm">
-                        <img src="@(string.IsNullOrWhiteSpace(ev.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : ev.ImageUrl)"
-                             class="card-img-top event-image"
-                             alt="@ev.Title" />
+        <div class="results-bar mb-4">
+            <span class="results-count">@filteredAndSortedEvents.Count() event(s) found</span>
+        </div>
 
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">@ev.Title</h5>
+        @if (!filteredAndSortedEvents.Any())
+        {
+            <div class="empty-state shadow-sm">
+                <div class="empty-icon mb-3">
+                    <span class="bi bi-search"></span>
+                </div>
+                <h4 class="mb-2">No matching events</h4>
+                <p class="text-muted mb-3">
+                    Try changing the selected filters or clearing them to see more results.
+                </p>
+                <button class="btn btn-outline-primary" @onclick="ClearFilters">Clear Filters</button>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var ev in filteredAndSortedEvents)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card event-card h-100 shadow-sm">
+                            <img src="@(string.IsNullOrWhiteSpace(ev.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : ev.ImageUrl)"
+                                 class="card-img-top event-image"
+                                 alt="@ev.Title" />
 
-                            <p class="text-muted mb-2">
-                                <strong>Date:</strong> @ev.Date.ToString("dd.MM.yyyy HH:mm")
-                            </p>
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
+                                    <h5 class="card-title mb-0">@ev.Title</h5>
+                                    <span class="badge bg-light text-dark category-badge">@ev.Category</span>
+                                </div>
 
-                            <p class="text-muted mb-2">
-                                <strong>Location:</strong> @ev.Location
-                            </p>
+                                <p class="text-muted mb-2">
+                                    <strong>Date:</strong> @ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                </p>
 
-                            <p class="card-text">
-                                @(string.IsNullOrWhiteSpace(ev.Description)
-                                    ? "No description available."
-                                    : (ev.Description.Length > 100
-                                        ? ev.Description.Substring(0, 100) + "..."
-                                        : ev.Description))
-                            </p>
+                                <p class="text-muted mb-2">
+                                    <strong>Location:</strong> @ev.Location
+                                </p>
 
-                            <p class="mb-3">
-                                <strong>Price:</strong> @(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")
-                            </p>
+                                <p class="card-text">
+                                    @(string.IsNullOrWhiteSpace(ev.Description)
+                                        ? "No description available."
+                                        : (ev.Description.Length > 100
+                                            ? ev.Description.Substring(0, 100) + "..."
+                                            : ev.Description))
+                                </p>
 
-                            <a class="btn btn-outline-primary mt-auto" href="/events/@ev.Id">
-                                View More
-                            </a>
+                                <p class="mb-3">
+                                    <strong>Price:</strong> @(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")
+                                </p>
+
+                                <a class="btn btn-outline-primary mt-auto" href="/events/@ev.Id">
+                                    View More
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
     }
 </div>
 
 <style>
+    .events-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .events-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .sort-box {
+        min-width: 240px;
+    }
+
+    .filters-toggle-btn {
+        height: 38px;
+        min-width: 130px;
+    }
+
+    .filters-panel {
+        border-radius: 18px;
+    }
+
+    .filters-bottom-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        border-top: 1px solid #eceff3;
+        padding-top: 1rem;
+    }
+
+    .free-only-switch {
+        margin-bottom: 0;
+    }
+
+        .free-only-switch .form-check-input {
+            cursor: pointer;
+            transform: scale(1.1);
+        }
+
+        .free-only-switch .form-check-label {
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+    .active-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f1f3f5;
+        border: 1px solid #dee2e6;
+        border-radius: 999px;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.92rem;
+    }
+
+        .filter-chip button {
+            border: none;
+            background: transparent;
+            padding: 0;
+            line-height: 1;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+    .results-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .results-count {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
     .event-card {
         border: none;
         border-radius: 16px;
@@ -80,10 +306,105 @@
         height: 220px;
         object-fit: cover;
     }
+
+    .category-badge {
+        border-radius: 999px;
+        font-weight: 500;
+        padding: 0.45rem 0.7rem;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 20px;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 2rem;
+        color: #6c757d;
+    }
 </style>
 
 @code {
     private List<Event>? events;
+
+    private bool showFilters = false;
+
+    private string selectedSort = "date_asc";
+    private string selectedCategory = string.Empty;
+    private string locationFilter = string.Empty;
+    private decimal? minPrice;
+    private decimal? maxPrice;
+    private bool freeOnly = false;
+
+    private readonly List<string> categories = new()
+    {
+        "Conference",
+        "Workshop",
+        "Concert",
+        "Sports",
+        "Networking",
+        "Festival",
+        "Seminar",
+        "Other"
+    };
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(selectedCategory) ||
+        !string.IsNullOrWhiteSpace(locationFilter) ||
+        minPrice.HasValue ||
+        maxPrice.HasValue ||
+        freeOnly;
+
+    private IEnumerable<Event> filteredAndSortedEvents
+    {
+        get
+        {
+            IEnumerable<Event> query = events ?? Enumerable.Empty<Event>();
+
+            if (!string.IsNullOrWhiteSpace(selectedCategory))
+            {
+                query = query.Where(e => e.Category == selectedCategory);
+            }
+
+            if (!string.IsNullOrWhiteSpace(locationFilter))
+            {
+                query = query.Where(e =>
+                    !string.IsNullOrWhiteSpace(e.Location) &&
+                    e.Location.Contains(locationFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (freeOnly)
+            {
+                query = query.Where(e => e.Price == 0);
+            }
+            else
+            {
+                if (minPrice.HasValue)
+                {
+                    query = query.Where(e => e.Price >= minPrice.Value);
+                }
+
+                if (maxPrice.HasValue)
+                {
+                    query = query.Where(e => e.Price <= maxPrice.Value);
+                }
+            }
+
+            query = selectedSort switch
+            {
+                "date_desc" => query.OrderByDescending(e => e.Date),
+                "price_asc" => query.OrderBy(e => e.Price).ThenBy(e => e.Date),
+                "price_desc" => query.OrderByDescending(e => e.Price).ThenBy(e => e.Date),
+                _ => query.OrderBy(e => e.Date)
+            };
+
+            return query;
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -91,4 +412,25 @@
             .OrderBy(e => e.Date)
             .ToList();
     }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+
+    private void ClearFilters()
+    {
+        selectedCategory = string.Empty;
+        locationFilter = string.Empty;
+        minPrice = null;
+        maxPrice = null;
+        freeOnly = false;
+        selectedSort = "date_asc";
+    }
+
+    private void ClearCategory() => selectedCategory = string.Empty;
+    private void ClearLocation() => locationFilter = string.Empty;
+    private void ClearMinPrice() => minPrice = null;
+    private void ClearMaxPrice() => maxPrice = null;
+    private void ClearFreeOnly() => freeOnly = false;
 }
