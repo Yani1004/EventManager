@@ -1,0 +1,76 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Login</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Login</h2>
+
+                    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                    {
+                        <div class="alert alert-danger">@ErrorMessage</div>
+                    }
+
+                    <EditForm Model="@loginModel" OnValidSubmit="@HandleSubmit" FormName="loginForm">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText class="form-control" @bind-Value="loginModel.Email" />
+                            <ValidationMessage For="@(() => loginModel.Email)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <InputText class="form-control" type="password" @bind-Value="loginModel.Password" />
+                            <ValidationMessage For="@(() => loginModel.Password)" />
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <InputCheckbox class="form-check-input" @bind-Value="loginModel.RememberMe" />
+                            <label class="form-check-label">Remember me</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginInputModel loginModel = new();
+    private string? ErrorMessage;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("error", out var error))
+        {
+            ErrorMessage = error.ToString();
+        }
+    }
+
+    private void HandleSubmit()
+    {
+        var rememberMe = loginModel.RememberMe ? "true" : "false";
+        var email = Uri.EscapeDataString(loginModel.Email);
+        var password = Uri.EscapeDataString(loginModel.Password);
+
+        Navigation.NavigateTo($"/account/do-login?email={email}&password={password}&rememberMe={rememberMe}", forceLoad: true);
+    }
+}

@@ -1,0 +1,257 @@
+﻿@page "/events/create"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
+
+@using System.Security.Claims
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Event</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 create-event-card">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="mb-2">Create Event</h1>
+                    <p class="text-muted mb-4">Fill in the details below to publish your event.</p>
+
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <div class="alert @messageCss mb-4">@message</div>
+                    }
+
+                    <EditForm Model="eventModel" OnValidSubmit="HandleCreateEvent">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="mb-3 text-danger" />
+
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="eventModel.Title" />
+                            <ValidationMessage For="@(() => eventModel.Title)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="eventModel.Description" rows="5" />
+                            <ValidationMessage For="@(() => eventModel.Description)" class="text-danger" />
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Date and Time</label>
+                                <input class="form-control"
+                                       type="datetime-local"
+                                       value="@eventDateLocalString"
+                                       @onchange="OnDateChanged" />
+                                @if (!string.IsNullOrWhiteSpace(dateValidationMessage))
+                                {
+                                    <div class="text-danger mt-1">@dateValidationMessage</div>
+                                }
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Capacity</label>
+                                <InputNumber class="form-control" @bind-Value="eventModel.Capacity" />
+                                <ValidationMessage For="@(() => eventModel.Capacity)" class="text-danger" />
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label">Price</label>
+                                <InputNumber class="form-control" @bind-Value="eventModel.Price" />
+                                <ValidationMessage For="@(() => eventModel.Price)" class="text-danger" />
+                                <div class="form-text">Use 0 for free events.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Image URL</label>
+                                <InputText class="form-control" @bind-Value="eventModel.ImageUrl" />
+                                <ValidationMessage For="@(() => eventModel.ImageUrl)" class="text-danger" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Location</label>
+                            <input class="form-control"
+                                   value="@eventModel.Location"
+                                   @oninput="OnLocationChanged" />
+                            <ValidationMessage For="@(() => eventModel.Location)" class="text-danger" />
+                            <div class="form-text">Enter city, venue, or full address.</div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(eventModel.Location))
+                        {
+                            <div class="map-preview-box mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>Location Preview</strong>
+                                    <a class="btn btn-sm btn-outline-primary" href="@googleMapsSearchUrl" target="_blank">
+                                        Open in Google Maps
+                                    </a>
+                                </div>
+
+                                <iframe src="@googleMapsEmbedUrl"
+                                        width="100%"
+                                        height="260"
+                                        style="border:0; border-radius:12px;"
+                                        allowfullscreen=""
+                                        loading="lazy">
+                                </iframe>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(eventModel.ImageUrl))
+                        {
+                            <div class="image-preview-box mb-4">
+                                <strong class="d-block mb-2">Image Preview</strong>
+                                <img src="@eventModel.ImageUrl"
+                                     alt="Event preview"
+                                     class="img-fluid rounded preview-image" />
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                                @(isSubmitting ? "Creating..." : "Create Event")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="GoBack">
+                                Cancel
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .create-event-card {
+        border-radius: 20px;
+    }
+
+    .map-preview-box,
+    .image-preview-box {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 16px;
+        padding: 1rem;
+    }
+
+    .preview-image {
+        max-height: 280px;
+        width: 100%;
+        object-fit: cover;
+    }
+</style>
+
+@code {
+    private Event eventModel = new();
+    private bool isSubmitting = false;
+
+    private string message = string.Empty;
+    private string messageCss = "alert-info";
+    private string dateValidationMessage = string.Empty;
+
+    private string googleMapsSearchUrl = string.Empty;
+    private string googleMapsEmbedUrl = string.Empty;
+
+    private string eventDateLocalString = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var defaultDate = DateTime.Now.AddDays(1).AddHours(1);
+        eventDateLocalString = defaultDate.ToString("yyyy-MM-ddTHH:mm");
+        eventModel.Date = defaultDate;
+        UpdateMapUrl();
+    }
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        eventDateLocalString = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnLocationChanged(ChangeEventArgs e)
+    {
+        eventModel.Location = e.Value?.ToString() ?? string.Empty;
+        UpdateMapUrl();
+    }
+
+    private void UpdateMapUrl()
+    {
+        var location = eventModel.Location ?? string.Empty;
+        var encodedLocation = Uri.EscapeDataString(location);
+
+        googleMapsSearchUrl = $"https://www.google.com/maps/search/?api=1&query={encodedLocation}";
+        googleMapsEmbedUrl = $"https://www.google.com/maps?q={encodedLocation}&output=embed";
+    }
+
+    private async Task HandleCreateEvent()
+    {
+        isSubmitting = true;
+        message = string.Empty;
+        dateValidationMessage = string.Empty;
+
+        try
+        {
+            if (!DateTime.TryParse(eventDateLocalString, out var parsedDate))
+            {
+                dateValidationMessage = "Please enter a valid date and time.";
+                return;
+            }
+
+            if (parsedDate <= DateTime.Now)
+            {
+                dateValidationMessage = "Event date must be in the future.";
+                return;
+            }
+
+            eventModel.Date = parsedDate;
+            UpdateMapUrl();
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                message = "Could not identify the current user.";
+                messageCss = "alert-danger";
+                return;
+            }
+
+            eventModel.CreatorId = userId;
+            eventModel.CreatedAt = DateTime.UtcNow;
+
+            Db.Events.Add(eventModel);
+            await Db.SaveChangesAsync();
+
+            message = "Event created successfully.";
+            messageCss = "alert-success";
+
+            await Task.Delay(600);
+            NavigationManager.NavigateTo("/my-events");
+        }
+        catch
+        {
+            message = "Something went wrong while creating the event.";
+            messageCss = "alert-danger";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/events");
+    }
+}

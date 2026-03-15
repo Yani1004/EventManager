@@ -1,0 +1,174 @@
+﻿@page "/admin/approvals"
+@rendermode InteractiveServer
+@using EventManager.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Roles = "Admin")]
+
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Approve Event Managers</PageTitle>
+
+<div class="container py-4">
+    <h1 class="mb-4">Pending Event Manager Requests</h1>
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="alert alert-success">@Message</div>
+    }
+
+    @if (pendingUsers.Count == 0)
+    {
+        <div class="alert alert-info">
+            There are no pending Event Manager requests.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Requested Role</th>
+                            <th>Status</th>
+                            <th class="text-center" style="width:120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @for (int i = 0; i < pendingUsers.Count; i++)
+                        {
+                            var user = pendingUsers[i];
+
+                            <tr>
+                                <td>@(i + 1)</td>
+
+                                <td>@user.FirstName</td>
+
+                                <td>@user.LastName</td>
+
+                                <td>@user.Email</td>
+
+                                <td>@user.RequestedRole</td>
+
+                                <td>
+                                    <span class="badge bg-warning text-dark">
+                                        Pending
+                                    </span>
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+
+                                        <button class="btn btn-success btn-sm"
+                                                title="Approve"
+                                                @onclick="() => ApproveUser(user.Id)">
+                                            <span class="bi bi-check-lg"></span>
+                                        </button>
+
+                                        <button class="btn btn-danger btn-sm"
+                                                title="Reject"
+                                                @onclick="() => RejectUser(user.Id)">
+                                            <span class="bi bi-x-lg"></span>
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PendingEventManagerViewModel> pendingUsers = new();
+    private string? Message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingUsers();
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        pendingUsers.Clear();
+
+        var users = UserManager.Users
+            .Where(u => u.RequestedRole == "EventManager" && !u.IsApproved)
+            .ToList();
+
+        foreach (var user in users)
+        {
+            pendingUsers.Add(new PendingEventManagerViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                RequestedRole = user.RequestedRole,
+                IsApproved = user.IsApproved
+            });
+        }
+    }
+
+    private async Task ApproveUser(string userId)
+    {
+        var user = await UserManager.FindByIdAsync(userId);
+
+        if (user == null)
+            return;
+
+        user.IsApproved = true;
+
+        var updateResult = await UserManager.UpdateAsync(user);
+
+        if (updateResult.Succeeded)
+        {
+            if (!await UserManager.IsInRoleAsync(user, "EventManager"))
+            {
+                await UserManager.AddToRoleAsync(user, "EventManager");
+            }
+
+            Message = $"User {user.Email} was approved successfully.";
+            await LoadPendingUsers();
+        }
+    }
+
+    private async Task RejectUser(string userId)
+    {
+        var user = await UserManager.FindByIdAsync(userId);
+
+        if (user == null)
+            return;
+
+        user.RequestedRole = "Attendee";
+        user.IsApproved = true;
+
+        var updateResult = await UserManager.UpdateAsync(user);
+
+        if (updateResult.Succeeded)
+        {
+            if (!await UserManager.IsInRoleAsync(user, "Attendee"))
+            {
+                await UserManager.AddToRoleAsync(user, "Attendee");
+            }
+
+            if (await UserManager.IsInRoleAsync(user, "EventManager"))
+            {
+                await UserManager.RemoveFromRoleAsync(user, "EventManager");
+            }
+
+            Message = $"User {user.Email} was rejected as Event Manager and remains an Attendee.";
+            await LoadPendingUsers();
+        }
+    }
+}

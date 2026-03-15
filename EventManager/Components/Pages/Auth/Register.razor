@@ -1,0 +1,177 @@
+@page "/register"
+@rendermode InteractiveServer
+
+@using EventManager.Models
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Register</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+
+            <div class="card shadow border-0 register-card">
+                <div class="card-body p-4">
+
+                    <h3 class="mb-1">Create Account</h3>
+                    <p class="text-muted mb-4">Join the platform to explore and manage events.</p>
+
+                    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+                    {
+                        <div class="alert alert-success">@SuccessMessage</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                    {
+                        <div class="alert alert-danger">@ErrorMessage</div>
+                    }
+
+                    <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                <InputText class="form-control" @bind-Value="registerModel.FirstName" />
+                                <ValidationMessage For="@(() => registerModel.FirstName)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                <InputText class="form-control" @bind-Value="registerModel.LastName" />
+                                <ValidationMessage For="@(() => registerModel.LastName)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Username</label>
+                                <InputText class="form-control" @bind-Value="registerModel.Username" />
+                                <ValidationMessage For="@(() => registerModel.Username)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" @bind-Value="registerModel.Email" />
+                                <ValidationMessage For="@(() => registerModel.Email)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Password</label>
+                                <InputText class="form-control" type="password" @bind-Value="registerModel.Password" />
+                                <ValidationMessage For="@(() => registerModel.Password)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Confirm Password</label>
+                                <InputText class="form-control" type="password" @bind-Value="registerModel.ConfirmPassword" />
+                                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Register As</label>
+                                <InputSelect class="form-select" @bind-Value="registerModel.AccountType">
+                                    <option value="Attendee">Attendee</option>
+                                    <option value="EventManager">Event Manager</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => registerModel.AccountType)" />
+                            </div>
+
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-4">
+                            Register
+                        </button>
+
+                    </EditForm>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .register-card {
+        border-radius: 16px;
+    }
+
+        .register-card h3 {
+            font-weight: 600;
+        }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+    }
+</style>
+
+@code {
+    private RegisterInputModel registerModel = new();
+    private string? SuccessMessage;
+    private string? ErrorMessage;
+
+    private async Task HandleRegister()
+    {
+        SuccessMessage = null;
+        ErrorMessage = null;
+
+        var existingUserByEmail = await UserManager.FindByEmailAsync(registerModel.Email);
+        if (existingUserByEmail != null)
+        {
+            ErrorMessage = "A user with this email already exists.";
+            return;
+        }
+
+        var existingUserByUsername = await UserManager.FindByNameAsync(registerModel.Username);
+        if (existingUserByUsername != null)
+        {
+            ErrorMessage = "This username is already taken.";
+            return;
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = registerModel.Username,
+            Email = registerModel.Email,
+            FirstName = registerModel.FirstName,
+            LastName = registerModel.LastName
+        };
+
+        if (registerModel.AccountType == "EventManager")
+        {
+            user.RequestedRole = "EventManager";
+            user.IsApproved = false;
+        }
+        else
+        {
+            user.RequestedRole = "Attendee";
+            user.IsApproved = true;
+        }
+
+        var result = await UserManager.CreateAsync(user, registerModel.Password);
+
+        if (!result.Succeeded)
+        {
+            ErrorMessage = string.Join(" ", result.Errors.Select(e => e.Description));
+            return;
+        }
+
+        if (registerModel.AccountType == "Attendee")
+        {
+            await UserManager.AddToRoleAsync(user, "Attendee");
+            SuccessMessage = "Registration successful. Please log in.";
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
+        else
+        {
+            SuccessMessage = "Your Event Manager request was submitted and is waiting for admin approval.";
+            registerModel = new RegisterInputModel();
+        }
+    }
+}

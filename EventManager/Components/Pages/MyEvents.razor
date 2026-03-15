@@ -1,0 +1,85 @@
+﻿@page "/my-events"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
+
+@using System.Security.Claims
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>My Events</PageTitle>
+
+<div class="container py-4">
+    <h1 class="mb-4">My Events</h1>
+
+    @if (isLoading)
+    {
+        <p>Loading events...</p>
+    }
+    else if (!myEvents.Any())
+    {
+        <div class="alert alert-info">
+            You have not created any events yet.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Capacity</th>
+                        <th>Price</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ev in myEvents)
+                    {
+                        <tr>
+                            <td>@ev.Title</td>
+                            <td>@ev.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>@ev.Location</td>
+                            <td>@ev.Capacity</td>
+                            <td>@(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")</td>
+                            <td class="d-flex gap-2">
+                                <a class="btn btn-sm btn-outline-primary" href="/events/@ev.Id">Details</a>
+                                <a class="btn btn-sm btn-outline-warning" href="/events/edit/@ev.Id">Edit</a>
+                                <a class="btn btn-sm btn-outline-danger" href="/events/delete/@ev.Id">Delete</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Event> myEvents = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            myEvents = await Db.Events
+                .Where(e => e.CreatorId == userId)
+                .OrderByDescending(e => e.Date)
+                .ToListAsync();
+        }
+
+        isLoading = false;
+    }
+}

@@ -1,0 +1,15 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Admin Panel</PageTitle>
+
+<div class="container py-4">
+    <h1>Admin Panel</h1>
+    <p>Only admins should see this page.</p>
+</div>
+<h3>Admin</h3>
+
+@code {
+
+}

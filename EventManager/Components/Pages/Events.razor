@@ -1,0 +1,94 @@
+﻿@page "/events"
+@rendermode InteractiveServer
+
+@using EventManager.Data
+@using EventManager.Models
+@inject ApplicationDbContext Db
+
+<PageTitle>Events</PageTitle>
+
+<div class="container py-4">
+    <h1 class="mb-4">Upcoming Events</h1>
+
+    @if (events == null)
+    {
+        <p>Loading events...</p>
+    }
+    else if (!events.Any())
+    {
+        <div class="alert alert-info">No events found.</div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var ev in events)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card event-card h-100 shadow-sm">
+                        <img src="@(string.IsNullOrWhiteSpace(ev.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : ev.ImageUrl)"
+                             class="card-img-top event-image"
+                             alt="@ev.Title" />
+
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@ev.Title</h5>
+
+                            <p class="text-muted mb-2">
+                                <strong>Date:</strong> @ev.Date.ToString("dd.MM.yyyy HH:mm")
+                            </p>
+
+                            <p class="text-muted mb-2">
+                                <strong>Location:</strong> @ev.Location
+                            </p>
+
+                            <p class="card-text">
+                                @(string.IsNullOrWhiteSpace(ev.Description)
+                                    ? "No description available."
+                                    : (ev.Description.Length > 100
+                                        ? ev.Description.Substring(0, 100) + "..."
+                                        : ev.Description))
+                            </p>
+
+                            <p class="mb-3">
+                                <strong>Price:</strong> @(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")
+                            </p>
+
+                            <a class="btn btn-outline-primary mt-auto" href="/events/@ev.Id">
+                                View More
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .event-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+        .event-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15) !important;
+        }
+
+    .event-image {
+        height: 220px;
+        object-fit: cover;
+    }
+</style>
+
+@code {
+    private List<Event>? events;
+
+    protected override void OnInitialized()
+    {
+        events = Db.Events
+            .OrderBy(e => e.Date)
+            .ToList();
+    }
+}

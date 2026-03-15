@@ -1,0 +1,71 @@
+﻿@page "/events/delete/{Id:int}"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
+
+@using System.Security.Claims
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Event</PageTitle>
+
+<div class="container py-4">
+    <h1 class="mb-4">Delete Event</h1>
+
+    @if (isLoading)
+    {
+        <p>Loading event...</p>
+    }
+    else if (eventItem == null)
+    {
+        <div class="alert alert-warning">Event not found or access denied.</div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            Are you sure you want to delete <strong>@eventItem.Title</strong>?
+        </div>
+
+        <button class="btn btn-danger" @onclick="DeleteConfirmed">Yes, Delete</button>
+        <a class="btn btn-secondary ms-2" href="/my-events">Cancel</a>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Event? eventItem;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        eventItem = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
+
+        if (eventItem == null || eventItem.CreatorId != userId)
+        {
+            eventItem = null;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (eventItem == null)
+            return;
+
+        Db.Events.Remove(eventItem);
+        await Db.SaveChangesAsync();
+        NavigationManager.NavigateTo("/my-events");
+    }
+}
