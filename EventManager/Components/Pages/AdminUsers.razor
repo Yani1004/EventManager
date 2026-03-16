@@ -11,122 +11,146 @@
 <PageTitle>All Users</PageTitle>
 
 <div class="container py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="fw-bold mb-1">All Users</h1>
             <p class="text-muted mb-0">View all registered users and their current roles.</p>
         </div>
 
-        <div class="mt-3 mt-md-0">
-            <a href="/admin" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to dashboard
-            </a>
-        </div>
+        <a href="/admin" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to dashboard
+        </a>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(Message))
     {
-        <div class="alert @messageCss alert-dismissible fade show" role="alert">
+        <div class="alert @messageCss alert-dismissible fade show">
             @Message
-            <button type="button" class="btn-close" @onclick="ClearMessage"></button>
+            <button class="btn-close" @onclick="ClearMessage"></button>
         </div>
     }
 
     @if (isLoading)
     {
-        <div class="card shadow-sm border-0 rounded-4">
+        <div class="card shadow-sm border-0">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="spinner-border text-primary"></div>
                     <span>Loading users...</span>
                 </div>
             </div>
         </div>
     }
-    else if (users.Count == 0)
-    {
-        <div class="alert alert-info">No users found.</div>
-    }
     else
     {
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-0">
+
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
+
                         <thead class="table-dark">
                             <tr>
-                                <th style="width:60px;">#</th>
+                                <th>#</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Requested Role</th>
-                                <th>Approved</th>
+                                <th>Status</th>
                                 <th>Current Role</th>
-                                <th class="text-center" style="width:180px;">Actions</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
+
                         <tbody>
+
                             @for (int i = 0; i < users.Count; i++)
                             {
                                 var user = users[i];
 
                                 <tr>
                                     <td>@(i + 1)</td>
+
                                     <td>@user.FullName</td>
+
                                     <td>@user.Email</td>
-                                    <td>@(string.IsNullOrWhiteSpace(user.RequestedRole) ? "-" : user.RequestedRole)</td>
+
                                     <td>
-                                        @if (user.IsApproved)
-                                        {
-                                            <span class="badge bg-success">Approved</span>
-                                        }
-                                        else
+                                        @(user.RequestedRole == "Attendee"
+                                            ? "-"
+                                            : user.RequestedRole)
+                                    </td>
+
+                                    <td>
+
+                                        @if (user.RequestedRole == "EventManager" && !user.IsApproved)
                                         {
                                             <span class="badge bg-warning text-dark">Pending</span>
                                         }
+                                        else if (user.RequestedRole == "EventManager" && user.IsApproved)
+                                        {
+                                            <span class="badge bg-success">Approved</span>
+                                        }
+                                        else if (user.RequestedRole == "Rejected")
+                                        {
+                                            <span class="badge bg-danger">Rejected</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Attendee</span>
+                                        }
+
                                     </td>
+
                                     <td>
                                         <span class="badge @GetRoleBadgeClass(user.CurrentRole)">
                                             @user.CurrentRole
                                         </span>
                                     </td>
+
                                     <td class="text-center">
+
                                         @if (user.RequestedRole == "EventManager" && !user.IsApproved)
                                         {
-                                            <div class="d-flex justify-content-center gap-2">
-                                                <button class="btn btn-success btn-sm"
-                                                        title="Approve"
-                                                        disabled="@isProcessing"
-                                                        @onclick="() => ApproveUser(user.Id)">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </button>
+                                            <button class="btn btn-success btn-sm me-2"
+                                                    disabled="@isProcessing"
+                                                    @onclick="() => ApproveUser(user.Id)">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
 
-                                                <button class="btn btn-danger btn-sm"
-                                                        title="Reject"
-                                                        disabled="@isProcessing"
-                                                        @onclick="() => RejectUser(user.Id)">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            </div>
+                                            <button class="btn btn-danger btn-sm"
+                                                    disabled="@isProcessing"
+                                                    @onclick="() => RejectUser(user.Id)">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
                                         }
                                         else
                                         {
                                             <span class="text-muted small">No actions</span>
                                         }
+
                                     </td>
+
                                 </tr>
                             }
+
                         </tbody>
+
                     </table>
                 </div>
+
             </div>
         </div>
     }
+
 </div>
 
 @code {
+
     private List<UserListItemViewModel> users = new();
     private bool isLoading = true;
     private bool isProcessing;
+
     private string? Message;
     private string messageCss = "alert-success";
 
@@ -138,6 +162,7 @@
     private async Task LoadUsers()
     {
         isLoading = true;
+
         users.Clear();
 
         var allUsers = await UserManager.Users
@@ -153,7 +178,7 @@
             {
                 Id = user.Id,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
-                Email = user.Email ?? string.Empty,
+                Email = user.Email ?? "",
                 RequestedRole = user.RequestedRole,
                 IsApproved = user.IsApproved,
                 CurrentRole = roles.FirstOrDefault() ?? "No Role"
@@ -169,6 +194,7 @@
         ClearMessage();
 
         var user = await UserManager.FindByIdAsync(userId);
+
         if (user == null)
         {
             ShowError("User not found.");
@@ -179,32 +205,18 @@
         user.IsApproved = true;
         user.RequestedRole = "EventManager";
 
-        var updateResult = await UserManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
-        {
-            ShowError(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
-            isProcessing = false;
-            return;
-        }
+        await UserManager.UpdateAsync(user);
 
         if (!await UserManager.IsInRoleAsync(user, "EventManager"))
-        {
-            var addRoleResult = await UserManager.AddToRoleAsync(user, "EventManager");
-            if (!addRoleResult.Succeeded)
-            {
-                ShowError(string.Join(" ", addRoleResult.Errors.Select(e => e.Description)));
-                isProcessing = false;
-                return;
-            }
-        }
+            await UserManager.AddToRoleAsync(user, "EventManager");
 
         if (await UserManager.IsInRoleAsync(user, "Attendee"))
-        {
             await UserManager.RemoveFromRoleAsync(user, "Attendee");
-        }
 
-        ShowSuccess($"User {user.Email} was approved successfully.");
+        ShowSuccess($"User {user.Email} approved as Event Manager.");
+
         await LoadUsers();
+
         isProcessing = false;
     }
 
@@ -214,6 +226,7 @@
         ClearMessage();
 
         var user = await UserManager.FindByIdAsync(userId);
+
         if (user == null)
         {
             ShowError("User not found.");
@@ -221,10 +234,12 @@
             return;
         }
 
-        user.RequestedRole = "Attendee";
-        user.IsApproved = true;
+        // Reject manager request
+        user.RequestedRole = "Rejected";
+        user.IsApproved = false;
 
         var updateResult = await UserManager.UpdateAsync(user);
+
         if (!updateResult.Succeeded)
         {
             ShowError(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
@@ -232,24 +247,18 @@
             return;
         }
 
+        // Ensure user remains Attendee
         if (!await UserManager.IsInRoleAsync(user, "Attendee"))
-        {
-            var addRoleResult = await UserManager.AddToRoleAsync(user, "Attendee");
-            if (!addRoleResult.Succeeded)
-            {
-                ShowError(string.Join(" ", addRoleResult.Errors.Select(e => e.Description)));
-                isProcessing = false;
-                return;
-            }
-        }
+            await UserManager.AddToRoleAsync(user, "Attendee");
 
+        // Remove manager role
         if (await UserManager.IsInRoleAsync(user, "EventManager"))
-        {
             await UserManager.RemoveFromRoleAsync(user, "EventManager");
-        }
 
-        ShowSuccess($"User {user.Email} remains an Attendee.");
+        ShowSuccess($"User {user.Email} request rejected.");
+
         await LoadUsers();
+
         isProcessing = false;
     }
 
@@ -280,11 +289,12 @@
 
     public class UserListItemViewModel
     {
-        public string Id { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string Id { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
         public string? RequestedRole { get; set; }
         public bool IsApproved { get; set; }
-        public string CurrentRole { get; set; } = "No Role";
+        public string CurrentRole { get; set; } = "";
     }
+
 }

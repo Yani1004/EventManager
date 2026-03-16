@@ -1,0 +1,336 @@
+﻿@page "/admin/events"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Manage Events</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Manage Events</h1>
+            <p class="text-muted mb-0">Review, flag, hide, and restore platform events.</p>
+        </div>
+
+        <div class="mt-3 mt-md-0">
+            <a href="/admin" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to dashboard
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="alert @messageCss alert-dismissible fade show">
+            @Message
+            <button type="button" class="btn-close" @onclick="ClearMessage"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="spinner-border text-primary"></div>
+                    <span>Loading events...</span>
+                </div>
+            </div>
+        </div>
+    }
+    else if (events.Count == 0)
+    {
+        <div class="alert alert-info shadow-sm">
+            There are no events in the system.
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <InputText class="form-control" @bind-Value="searchTerm" placeholder="Search by title, location, category..." />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <InputSelect class="form-select" @bind-Value="selectedStatus">
+                    <option value="">All statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Flagged">Flagged</option>
+                    <option value="Hidden">Hidden</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Sort</label>
+                <InputSelect class="form-select" @bind-Value="selectedSort">
+                    <option value="date_asc">Date: Soonest First</option>
+                    <option value="date_desc">Date: Latest First</option>
+                    <option value="title_asc">Title: A-Z</option>
+                    <option value="title_desc">Title: Z-A</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Title</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Category</th>
+                                <th>Created By</th>
+                                <th>Status</th>
+                                <th>Admin Note</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @for (int i = 0; i < FilteredEvents.Count; i++)
+                            {
+                                var ev = FilteredEvents[i];
+
+                                <tr>
+                                    <td>@(i + 1)</td>
+                                    <td>@ev.Title</td>
+                                    <td>@ev.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>@ev.Location</td>
+                                    <td>@ev.Category</td>
+                                    <td>@GetCreatorName(ev.CreatorId)</td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(ev.Status)">
+                                            @ev.Status
+                                        </span>
+                                    </td>
+                                    <td>@(string.IsNullOrWhiteSpace(ev.AdminNote) ? "-" : ev.AdminNote)</td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                            <a href="/events/@ev.Id" class="btn btn-outline-primary btn-sm" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+
+                                            @if (ev.Status != "Flagged")
+                                            {
+                                                <button class="btn btn-warning btn-sm"
+                                                        title="Flag"
+                                                        disabled="@isProcessing"
+                                                        @onclick='() => UpdateStatus(ev.Id, "Flagged", "Marked by admin for review.")'>
+                                                    <i class="bi bi-flag-fill"></i>
+                                                </button>
+                                            }
+
+                                            @if (ev.Status != "Hidden")
+                                            {
+                                                <button class="btn btn-secondary btn-sm"
+                                                        title="Hide"
+                                                        disabled="@isProcessing"
+                                                        @onclick='() => UpdateStatus(ev.Id, "Hidden", "Hidden by admin.")'>
+                                                    <i class="bi bi-eye-slash-fill"></i>
+                                                </button>
+                                            }
+
+                                            @if (ev.Status != "Active")
+                                            {
+                                                <button class="btn btn-success btn-sm"
+                                                        title="Restore"
+                                                        disabled="@isProcessing"
+                                                        @onclick='() => UpdateStatus(ev.Id, "Active", null)'>
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
+
+@code {
+    private List<Event> events = new();
+    private Dictionary<string, string> creatorNames = new();
+
+    private bool isLoading = true;
+    private bool isProcessing;
+
+    private string? Message;
+    private string messageCss = "alert-success";
+
+    private string searchTerm = string.Empty;
+    private string selectedStatus = string.Empty;
+    private string selectedSort = "date_asc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        isLoading = true;
+
+        events = await Db.Events
+            .OrderBy(e => e.Date)
+            .ToListAsync();
+
+        creatorNames.Clear();
+
+        var creatorIds = events
+            .Where(e => !string.IsNullOrWhiteSpace(e.CreatorId))
+            .Select(e => e.CreatorId)
+            .Distinct()
+            .ToList();
+
+        foreach (var creatorId in creatorIds)
+        {
+            var user = await UserManager.FindByIdAsync(creatorId!);
+
+            if (user != null)
+            {
+                var fullName = $"{user.FirstName} {user.LastName}".Trim();
+                creatorNames[creatorId!] = string.IsNullOrWhiteSpace(fullName)
+                    ? user.Email ?? "Unknown"
+                    : fullName;
+            }
+            else
+            {
+                creatorNames[creatorId!] = "Unknown";
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private List<Event> FilteredEvents
+    {
+        get
+        {
+            IEnumerable<Event> query = events;
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(e =>
+                    e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    e.Location.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    e.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedStatus))
+            {
+                query = query.Where(e => e.Status == selectedStatus);
+            }
+
+            query = selectedSort switch
+            {
+                "date_desc" => query.OrderByDescending(e => e.Date),
+                "title_asc" => query.OrderBy(e => e.Title),
+                "title_desc" => query.OrderByDescending(e => e.Title),
+                _ => query.OrderBy(e => e.Date)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    private async Task UpdateStatus(int eventId, string newStatus, string? adminNote)
+    {
+        isProcessing = true;
+        ClearMessage();
+
+        var ev = await Db.Events.FindAsync(eventId);
+
+        if (ev == null)
+        {
+            ShowError("Event not found.");
+            isProcessing = false;
+            return;
+        }
+
+        ev.Status = newStatus;
+        ev.AdminNote = adminNote;
+
+        try
+        {
+            await Db.SaveChangesAsync();
+            ShowSuccess($"Event \"{ev.Title}\" updated to {newStatus}.");
+            await LoadEvents();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not update event. {ex.Message}");
+        }
+
+        isProcessing = false;
+    }
+
+    private string GetCreatorName(string? creatorId)
+    {
+        if (string.IsNullOrWhiteSpace(creatorId))
+            return "Unknown";
+
+        return creatorNames.TryGetValue(creatorId, out var name)
+            ? name
+            : "Unknown";
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Active" => "bg-success",
+        "Flagged" => "bg-warning text-dark",
+        "Hidden" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedStatus = string.Empty;
+        selectedSort = "date_asc";
+    }
+
+    private void ShowSuccess(string message)
+    {
+        Message = message;
+        messageCss = "alert-success";
+    }
+
+    private void ShowError(string message)
+    {
+        Message = message;
+        messageCss = "alert-danger";
+    }
+
+    private void ClearMessage()
+    {
+        Message = null;
+    }
+}

@@ -27,7 +27,6 @@ namespace EventManager.Models
         [Range(0, 100000, ErrorMessage = "Price cannot be negative.")]
         public decimal Price { get; set; }
 
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public string CreatorId { get; set; } = string.Empty;
@@ -41,5 +40,7 @@ namespace EventManager.Models
         [StringLength(50)]
         public string Category { get; set; } = string.Empty;
 
+        public string Status { get; set; } = "Active";
+        public string? AdminNote { get; set; }
     }
 }
