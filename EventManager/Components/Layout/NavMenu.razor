@@ -44,7 +44,7 @@
             </div>
 
             <AuthorizeView>
-                <NotAuthorized Context="guestContext">
+                <NotAuthorized>
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="register">
                             <span class="bi bi-person-plus-fill" aria-hidden="true"></span>
@@ -68,7 +68,7 @@
             </AuthorizeView>
 
             <AuthorizeView Roles="Attendee">
-                <Authorized Context="attendeeContext">
+                <Authorized>
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="my-registrations">
                             <span class="bi bi-journal-check" aria-hidden="true"></span>
@@ -82,7 +82,7 @@
             </AuthorizeView>
 
             <AuthorizeView Roles="EventManager">
-                <Authorized Context="managerContext">
+                <Authorized>
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="events/create">
                             <span class="bi bi-plus-circle" aria-hidden="true"></span>
@@ -106,7 +106,7 @@
             </AuthorizeView>
 
             <AuthorizeView Roles="Admin">
-                <Authorized Context="adminContext">
+                <Authorized>
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="admin">
                             <span class="bi bi-shield-lock-fill" aria-hidden="true"></span>
@@ -126,13 +126,23 @@
                             }
                         </NavLink>
                     </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/users">
+                            <span class="bi bi-people-fill" aria-hidden="true"></span>
+                            @if (!isCollapsed)
+                            {
+                                <span class="nav-text">Users</span>
+                            }
+                        </NavLink>
+                    </div>
                 </Authorized>
             </AuthorizeView>
 
         </nav>
 
         <AuthorizeView>
-            <Authorized Context="logoutContext">
+            <Authorized>
                 <div class="logout-container px-3">
                     <button type="button" class="nav-link logout-link logout-button" @onclick="Logout">
                         <span class="bi bi-box-arrow-right" aria-hidden="true"></span>
