@@ -33,7 +33,19 @@
 
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                    <h1 class="mb-0">@eventItem.Title</h1>
+                    <div>
+                        <h1 class="mb-0">@eventItem.Title</h1>
+
+                        @if (canManageEvent)
+                        {
+                            <div class="mt-2">
+                                <span class="badge @GetStatusBadgeClass(eventItem.Status)">
+                                    @eventItem.Status
+                                </span>
+                            </div>
+                        }
+                    </div>
+
                     <span class="badge bg-light text-dark details-category-badge">@eventItem.Category</span>
                 </div>
 
@@ -46,6 +58,13 @@
 
                 <h5>Description</h5>
                 <p>@(string.IsNullOrWhiteSpace(eventItem.Description) ? "No description available." : eventItem.Description)</p>
+
+                @if (showManagerAdminNote)
+                {
+                    <div class="alert alert-warning mt-3">
+                        <strong>Admin note:</strong> @eventItem.AdminNote
+                    </div>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(message))
                 {
@@ -79,7 +98,7 @@
                     }
 
                     <button class="btn btn-secondary" @onclick="GoBack">
-                        Back to Events
+                        Back
                     </button>
                 </div>
             </div>
@@ -110,9 +129,13 @@
     private bool isRegistering = false;
     private bool canRegister = false;
     private bool canManageEvent = false;
+    private bool isAdmin = false;
+    private bool showManagerAdminNote = false;
+
     private int registeredCount = 0;
     private bool isAlreadyRegistered = false;
     private int? currentRegistrationId = null;
+    private string currentUserId = string.Empty;
 
     private string message = string.Empty;
     private string messageCss = "alert-info";
@@ -135,14 +158,16 @@
 
             if (user.Identity?.IsAuthenticated == true)
             {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                isAdmin = user.IsInRole("Admin");
 
                 if (user.IsInRole("Attendee"))
                 {
                     canRegister = true;
 
                     var existingRegistration = await Db.Registrations
-                        .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == userId);
+                        .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == currentUserId);
 
                     if (existingRegistration != null)
                     {
@@ -151,10 +176,16 @@
                     }
                 }
 
-                if (user.IsInRole("EventManager") && userId == eventItem.CreatorId)
+                if (user.IsInRole("EventManager") && currentUserId == eventItem.CreatorId)
                 {
                     canManageEvent = true;
                 }
+
+                showManagerAdminNote =
+                    user.IsInRole("EventManager") &&
+                    currentUserId == eventItem.CreatorId &&
+                    eventItem.Status == "Flagged" &&
+                    !string.IsNullOrWhiteSpace(eventItem.AdminNote);
             }
         }
 
@@ -273,6 +304,26 @@
 
     private void GoBack()
     {
+        if (isAdmin)
+        {
+            NavigationManager.NavigateTo("/admin/events");
+            return;
+        }
+
+        if (canManageEvent)
+        {
+            NavigationManager.NavigateTo("/my-events");
+            return;
+        }
+
         NavigationManager.NavigateTo("/events");
     }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Active" => "bg-success",
+        "Flagged" => "bg-warning text-dark",
+        "Hidden" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
 }

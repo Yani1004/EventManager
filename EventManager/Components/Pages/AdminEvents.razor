@@ -16,7 +16,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
         <div>
             <h1 class="fw-bold mb-1">Manage Events</h1>
-            <p class="text-muted mb-0">Review, flag, hide, and restore platform events.</p>
+            <p class="text-muted mb-0">Review, flag, hide, restore, and re-check platform events.</p>
         </div>
 
         <div class="mt-3 mt-md-0">
@@ -66,6 +66,7 @@
                     <option value="Active">Active</option>
                     <option value="Flagged">Flagged</option>
                     <option value="Hidden">Hidden</option>
+                    <option value="PendingReview">Pending Review</option>
                 </InputSelect>
             </div>
 
@@ -99,7 +100,7 @@
                                 <th>Category</th>
                                 <th>Created By</th>
                                 <th>Status</th>
-                                <th>Admin Note</th>
+                                <th style="min-width: 280px;">Admin Note</th>
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
@@ -118,23 +119,47 @@
                                     <td>@GetCreatorName(ev.CreatorId)</td>
                                     <td>
                                         <span class="badge @GetStatusBadgeClass(ev.Status)">
-                                            @ev.Status
+                                            @GetStatusLabel(ev.Status)
                                         </span>
                                     </td>
-                                    <td>@(string.IsNullOrWhiteSpace(ev.AdminNote) ? "-" : ev.AdminNote)</td>
+
+                                    <td>
+                                        <input class="form-control form-control-sm"
+                                               placeholder="Write admin note..."
+                                               value="@GetAdminNoteValue(ev.Id)"
+                                               @oninput="(e) => UpdateAdminNoteInput(ev.Id, e.Value?.ToString() ?? string.Empty)" />
+
+                                        @if (!string.IsNullOrWhiteSpace(ev.AdminNote))
+                                        {
+                                            <div class="small text-muted mt-1">
+                                                Saved: @ev.AdminNote
+                                            </div>
+                                        }
+                                    </td>
+
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-2 flex-wrap">
                                             <a href="/events/@ev.Id" class="btn btn-outline-primary btn-sm" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
 
-                                            @if (ev.Status != "Flagged")
+                                            @if (ev.Status == "Active" || ev.Status == "Hidden" || ev.Status == "PendingReview")
                                             {
                                                 <button class="btn btn-warning btn-sm"
                                                         title="Flag"
                                                         disabled="@isProcessing"
-                                                        @onclick='() => UpdateStatus(ev.Id, "Flagged", "Marked by admin for review.")'>
+                                                        @onclick='() => FlagEvent(ev.Id)'>
                                                     <i class="bi bi-flag-fill"></i>
+                                                </button>
+                                            }
+
+                                            @if (ev.Status == "Flagged")
+                                            {
+                                                <button class="btn btn-outline-warning btn-sm"
+                                                        title="Update note"
+                                                        disabled="@isProcessing"
+                                                        @onclick='() => UpdateFlaggedNote(ev.Id)'>
+                                                    <i class="bi bi-save"></i>
                                                 </button>
                                             }
 
@@ -143,7 +168,7 @@
                                                 <button class="btn btn-secondary btn-sm"
                                                         title="Hide"
                                                         disabled="@isProcessing"
-                                                        @onclick='() => UpdateStatus(ev.Id, "Hidden", "Hidden by admin.")'>
+                                                        @onclick='() => UpdateStatus(ev.Id, "Hidden")'>
                                                     <i class="bi bi-eye-slash-fill"></i>
                                                 </button>
                                             }
@@ -153,7 +178,7 @@
                                                 <button class="btn btn-success btn-sm"
                                                         title="Restore"
                                                         disabled="@isProcessing"
-                                                        @onclick='() => UpdateStatus(ev.Id, "Active", null)'>
+                                                        @onclick='() => UpdateStatus(ev.Id, "Active")'>
                                                     <i class="bi bi-arrow-clockwise"></i>
                                                 </button>
                                             }
@@ -178,6 +203,7 @@
 @code {
     private List<Event> events = new();
     private Dictionary<string, string> creatorNames = new();
+    private Dictionary<int, string> adminNotes = new();
 
     private bool isLoading = true;
     private bool isProcessing;
@@ -203,6 +229,12 @@
             .ToListAsync();
 
         creatorNames.Clear();
+        adminNotes.Clear();
+
+        foreach (var ev in events)
+        {
+            adminNotes[ev.Id] = ev.AdminNote ?? string.Empty;
+        }
 
         var creatorIds = events
             .Where(e => !string.IsNullOrWhiteSpace(e.CreatorId))
@@ -261,7 +293,107 @@
         }
     }
 
-    private async Task UpdateStatus(int eventId, string newStatus, string? adminNote)
+    private string GetAdminNoteValue(int eventId)
+    {
+        return adminNotes.TryGetValue(eventId, out var value) ? value : string.Empty;
+    }
+
+    private void UpdateAdminNoteInput(int eventId, string value)
+    {
+        adminNotes[eventId] = value;
+    }
+
+    private async Task FlagEvent(int eventId)
+    {
+        isProcessing = true;
+        ClearMessage();
+
+        var ev = await Db.Events.FindAsync(eventId);
+
+        if (ev == null)
+        {
+            ShowError("Event not found.");
+            isProcessing = false;
+            return;
+        }
+
+        var note = adminNotes.TryGetValue(eventId, out var value)
+            ? value?.Trim()
+            : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            ShowError("Please write an admin note before flagging the event.");
+            isProcessing = false;
+            return;
+        }
+
+        ev.Status = "Flagged";
+        ev.AdminNote = note;
+
+        try
+        {
+            await Db.SaveChangesAsync();
+            ShowSuccess($"Event \"{ev.Title}\" was flagged successfully.");
+            await LoadEvents();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not flag event. {ex.Message}");
+        }
+
+        isProcessing = false;
+    }
+
+    private async Task UpdateFlaggedNote(int eventId)
+    {
+        isProcessing = true;
+        ClearMessage();
+
+        var ev = await Db.Events.FindAsync(eventId);
+
+        if (ev == null)
+        {
+            ShowError("Event not found.");
+            isProcessing = false;
+            return;
+        }
+
+        if (ev.Status != "Flagged")
+        {
+            ShowError("Only flagged events can update the saved admin note.");
+            isProcessing = false;
+            return;
+        }
+
+        var note = adminNotes.TryGetValue(eventId, out var value)
+            ? value?.Trim()
+            : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            ShowError("Please write an admin note.");
+            isProcessing = false;
+            return;
+        }
+
+        ev.AdminNote = note;
+
+        try
+        {
+            await Db.SaveChangesAsync();
+            ShowSuccess($"Admin note updated for \"{ev.Title}\".");
+            await LoadEvents();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not update admin note. {ex.Message}");
+        }
+
+        isProcessing = false;
+    }
+
+    private async Task UpdateStatus(int eventId, string newStatus)
     {
         isProcessing = true;
         ClearMessage();
@@ -276,12 +408,17 @@
         }
 
         ev.Status = newStatus;
-        ev.AdminNote = adminNote;
+
+        if (newStatus != "Flagged")
+        {
+            ev.AdminNote = null;
+            adminNotes[eventId] = string.Empty;
+        }
 
         try
         {
             await Db.SaveChangesAsync();
-            ShowSuccess($"Event \"{ev.Title}\" updated to {newStatus}.");
+            ShowSuccess($"Event \"{ev.Title}\" updated to {GetStatusLabel(newStatus)}.");
             await LoadEvents();
         }
         catch (Exception ex)
@@ -306,8 +443,15 @@
     {
         "Active" => "bg-success",
         "Flagged" => "bg-warning text-dark",
+        "PendingReview" => "bg-info text-dark",
         "Hidden" => "bg-secondary",
         _ => "bg-light text-dark"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "PendingReview" => "Pending Review",
+        _ => status
     };
 
     private void ClearFilters()

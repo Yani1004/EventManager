@@ -409,6 +409,7 @@
     protected override void OnInitialized()
     {
         events = Db.Events
+            .Where(e => e.Status == "Active")
             .OrderBy(e => e.Date)
             .ToList();
     }

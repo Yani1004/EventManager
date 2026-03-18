@@ -39,6 +39,8 @@
                         <th>Capacity</th>
                         <th>Price</th>
                         <th>Registered</th>
+                        <th>Status</th>
+                        <th>Admin Note</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -53,6 +55,21 @@
                             <td>@ev.Capacity</td>
                             <td>@(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")</td>
                             <td>@ev.Registrations.Count / @ev.Capacity</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(ev.Status)">
+                                    @ev.Status
+                                </span>
+                            </td>
+                            <td>
+                                @if (ev.Status == "Flagged" && !string.IsNullOrWhiteSpace(ev.AdminNote))
+                                {
+                                    <span>@ev.AdminNote</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
                             <td class="d-flex gap-2 flex-wrap">
                                 <a class="btn btn-sm btn-outline-primary" href="/events/@ev.Id">Details</a>
                                 <a class="btn btn-sm btn-outline-info" href="/events/@ev.Id/registrations">Registrations</a>
@@ -88,4 +105,13 @@
 
         isLoading = false;
     }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Active" => "bg-success",
+        "Flagged" => "bg-warning text-dark",
+        "PendingReview" => "bg-info text-dark",
+        "Hidden" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
 }

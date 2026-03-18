@@ -270,6 +270,8 @@
     protected override void OnInitialized()
     {
         eventModel.Date = DateTime.Now.AddDays(1).AddHours(1);
+        eventModel.Status = "Active";
+        eventModel.AdminNote = null;
         UpdateMapUrl();
     }
 
@@ -318,6 +320,8 @@
 
             eventModel.CreatorId = userId;
             eventModel.CreatedAt = DateTime.UtcNow;
+            eventModel.Status = "Active";
+            eventModel.AdminNote = null;
 
             var localEventDate = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Local);
             eventModel.Date = localEventDate.ToUniversalTime();
