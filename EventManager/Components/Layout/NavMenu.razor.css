@@ -6,6 +6,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
 }
 
     .sidebar.collapsed {
@@ -15,6 +16,8 @@
 .top-row {
     height: 4rem;
     background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
 }
 
 .navbar-brand {
@@ -57,7 +60,7 @@
     align-items: center !important;
     gap: 1rem !important;
     color: rgba(255, 255, 255, 0.9);
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     padding: 0.9rem 1rem !important;
     text-decoration: none;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -69,7 +72,7 @@
     }
 
     .nav-link.active {
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.18);
         color: white;
     }
 
@@ -85,6 +88,7 @@
 .nav-text {
     display: inline-block;
     margin-left: 0.15rem;
+    white-space: nowrap;
 }
 
 .sidebar.collapsed .nav-link {
@@ -99,20 +103,25 @@
     padding-right: 0.5rem !important;
 }
 
+.sidebar.collapsed .nav-text {
+    display: none;
+}
+
 .logout-container {
     margin-top: auto;
     padding-bottom: 1rem;
 }
 
 .logout-link {
-    color: #ff4d4f;
+    color: #ffb3b3;
     justify-content: flex-start !important;
 }
 
     .logout-link:hover {
         background-color: rgba(255, 77, 79, 0.15);
-        color: #ff6b6b;
+        color: #ffffff;
     }
+
 .logout-button {
     background: transparent;
     border: none;
@@ -120,4 +129,19 @@
     text-align: left;
     cursor: pointer;
     font: inherit;
+}
+
+@media (max-width: 640.98px) {
+    .sidebar {
+        width: 100%;
+        min-height: auto;
+    }
+
+        .sidebar.collapsed {
+            width: 100%;
+        }
+
+    .nav-scrollable {
+        padding-bottom: 1rem;
+    }
 }

@@ -5,14 +5,9 @@
 <div class="sidebar @(isCollapsed ? "collapsed" : "")">
     <div class="top-row navbar navbar-dark px-3">
         <div class="d-flex align-items-center justify-content-between w-100">
-            @if (!isCollapsed)
-            {
-                <a class="navbar-brand m-0" href="">EventManager</a>
-            }
-            else
-            {
-                <a class="navbar-brand m-0" href="">EM</a>
-            }
+            <a class="navbar-brand m-0" href="">
+                @(isCollapsed ? "EM" : "EventManager")
+            </a>
 
             <button class="toggle-btn" @onclick="ToggleSidebar" type="button">
                 <span class="bi bi-list"></span>
@@ -23,65 +18,28 @@
     <div class="nav-scrollable">
         <nav class="nav flex-column">
 
-            <!-- Home: visible to guests, attendees, and event managers -->
-            <AuthorizeView Roles="Attendee,EventManager">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                            <span class="bi bi-house-door-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Home</span>
-                            }
-                        </NavLink>
-                    </div>
-                </Authorized>
-            </AuthorizeView>
+            <!-- Public links -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Home</span>
+                    }
+                </NavLink>
+            </div>
 
-            <AuthorizeView>
-                <NotAuthorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                            <span class="bi bi-house-door-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Home</span>
-                            }
-                        </NavLink>
-                    </div>
-                </NotAuthorized>
-            </AuthorizeView>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="events">
+                    <span class="bi bi-calendar-event-fill" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Events</span>
+                    }
+                </NavLink>
+            </div>
 
-            <!-- Public Events: visible to guests, attendees, and event managers -->
-            <AuthorizeView Roles="Attendee,EventManager">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="events">
-                            <span class="bi bi-calendar-event-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Events</span>
-                            }
-                        </NavLink>
-                    </div>
-                </Authorized>
-            </AuthorizeView>
-
-            <AuthorizeView>
-                <NotAuthorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="events">
-                            <span class="bi bi-calendar-event-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Events</span>
-                            }
-                        </NavLink>
-                    </div>
-                </NotAuthorized>
-            </AuthorizeView>
-
-            <!-- Guest-only links -->
+            <!-- Guest-only -->
             <AuthorizeView>
                 <NotAuthorized>
                     <div class="nav-item px-3">
@@ -190,7 +148,6 @@
                     </div>
                 </Authorized>
             </AuthorizeView>
-
         </nav>
 
         <AuthorizeView>

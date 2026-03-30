@@ -1,12 +1,269 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
-<div class="container py-5">
-    <div class="text-center">
-        <h1 class="display-5 fw-bold">Event Management System</h1>
-        <p class="lead mt-3">
-            Browse events, register as an attendee, or apply to become an event manager.
-        </p>
-    </div>
+<div class="home-page">
+    <section class="hero-section">
+        <div class="hero-shell">
+            @if (featuredEvents.Any())
+            {
+                var ev = featuredEvents[currentSlideIndex];
+
+                <div class="hero-carousel-card">
+                    <div class="hero-image-side">
+                        <img src="@GetImage(ev)" alt="@ev.Title" class="hero-image" />
+                        <div class="hero-image-overlay"></div>
+                    </div>
+
+                    <div class="hero-content-side">
+                        <span class="hero-badge">Featured Event</span>
+
+                        @if (!string.IsNullOrWhiteSpace(ev.Category))
+                        {
+                            <div class="hero-category">@ev.Category</div>
+                        }
+
+                        <h1>@ev.Title</h1>
+
+                        <div class="hero-meta">
+                            <span>@ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                            <span>@ev.Location</span>
+                        </div>
+
+                        <p class="hero-description">
+                            @Shorten(ev.Description, 140)
+                        </p>
+
+                        <div class="hero-actions">
+                            <a class="btn btn-dark btn-lg" href="/events/@ev.Id">View Details</a>
+
+                            @if (!isAuthenticated)
+                            {
+                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
+                            }
+                            else if (isEventManager)
+                            {
+                                <a class="btn btn-outline-dark btn-lg" href="/my-events">My Events</a>
+                            }
+                            else if (isAttendee)
+                            {
+                                <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
+                            }
+                            else if (isAdmin)
+                            {
+                                <a class="btn btn-outline-dark btn-lg" href="/admin">Admin Panel</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
+                            }
+                        </div>
+
+                        @if (featuredEvents.Count > 1)
+                        {
+                            <div class="carousel-controls">
+                                <button class="carousel-arrow" @onclick="PreviousSlide" type="button" aria-label="Previous slide">‹</button>
+
+                                <div class="carousel-dots">
+                                    @for (int i = 0; i < featuredEvents.Count; i++)
+                                    {
+                                        <button class="dot @(i == currentSlideIndex ? "active" : "")"
+                                                @onclick="() => GoToSlide(i)"
+                                                type="button"
+                                                aria-label="Go to slide @(i + 1)">
+                                        </button>
+                                    }
+                                </div>
+
+                                <button class="carousel-arrow" @onclick="NextSlide" type="button" aria-label="Next slide">›</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="hero-empty">
+                    <div class="hero-empty-content">
+                        <span class="hero-badge">Welcome</span>
+                        <h1>Discover events worth attending</h1>
+                        <p>
+                            Explore upcoming events, register easily, and stay connected with experiences that matter to you.
+                        </p>
+
+                        <div class="hero-actions">
+                            @if (!isAuthenticated)
+                            {
+                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                                <a class="btn btn-outline-dark btn-lg" href="/register">Register</a>
+                            }
+                            else if (isAttendee)
+                            {
+                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                                <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
+                            }
+                            else if (isEventManager)
+                            {
+                                <a class="btn btn-dark btn-lg" href="/my-events">My Events</a>
+                                <a class="btn btn-outline-dark btn-lg" href="/events/create">Create Event</a>
+                            }
+                            else if (isAdmin)
+                            {
+                                <a class="btn btn-dark btn-lg" href="/admin">Admin Panel</a>
+                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="home-info-section">
+        <div class="section-header-center">
+            <h2>About the Platform</h2>
+            <p>
+                A simple place to discover events, join experiences, and manage event activity.
+            </p>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Browse Events</h3>
+                <p>
+                    Explore concerts, workshops, conferences, sports events, and more in one organized place.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>Easy Registration</h3>
+                <p>
+                    Attendees can quickly register for events and keep track of their upcoming plans.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>Event Management</h3>
+                <p>
+                    Event managers can create, edit, and monitor their events through a dedicated workflow.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-cta-section">
+        <div class="cta-box">
+            <h2>Ready to explore upcoming events?</h2>
+            <p>Find your next event and see what is happening now.</p>
+
+            <div class="cta-actions">
+                @if (!isAuthenticated)
+                {
+                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                    <a class="btn btn-outline-dark btn-lg" href="/register">Register</a>
+                }
+                else if (isAttendee)
+                {
+                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                    <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
+                }
+                else if (isEventManager)
+                {
+                    <a class="btn btn-dark btn-lg" href="/my-events">My Events</a>
+                    <a class="btn btn-outline-dark btn-lg" href="/events/create">Create Event</a>
+                }
+                else if (isAdmin)
+                {
+                    <a class="btn btn-dark btn-lg" href="/admin">Admin Panel</a>
+                    <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
+                }
+                else
+                {
+                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
+                }
+            </div>
+        </div>
+    </section>
 </div>
+
+@code {
+    private List<Event> featuredEvents = new();
+    private int currentSlideIndex = 0;
+
+    private bool isAuthenticated;
+    private bool isAdmin;
+    private bool isEventManager;
+    private bool isAttendee;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        isAdmin = user.IsInRole("Admin");
+        isEventManager = user.IsInRole("EventManager");
+        isAttendee = user.IsInRole("Attendee");
+
+        var now = DateTime.UtcNow;
+
+        featuredEvents = await Db.Events
+            .Where(e => e.Status == "Active" && e.Date >= now)
+            .OrderBy(e => e.Date)
+            .Take(3)
+            .ToListAsync();
+    }
+
+    private void NextSlide()
+    {
+        if (featuredEvents.Count == 0)
+            return;
+
+        currentSlideIndex = (currentSlideIndex + 1) % featuredEvents.Count;
+    }
+
+    private void PreviousSlide()
+    {
+        if (featuredEvents.Count == 0)
+            return;
+
+        currentSlideIndex = (currentSlideIndex - 1 + featuredEvents.Count) % featuredEvents.Count;
+    }
+
+    private void GoToSlide(int index)
+    {
+        currentSlideIndex = index;
+    }
+
+    private static string GetImage(Event ev)
+    {
+        if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
+            return ev.ImageUrl;
+
+        return "https://via.placeholder.com/1200x700?text=Event+Image";
+    }
+
+    private static string Shorten(string? text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "No description available.";
+
+        if (text.Length <= maxLength)
+            return text;
+
+        return text[..maxLength] + "...";
+    }
+}

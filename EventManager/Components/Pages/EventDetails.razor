@@ -36,11 +36,11 @@
                     <div>
                         <h1 class="mb-0">@eventItem.Title</h1>
 
-                        @if (canManageEvent)
+                        @if (canManageEvent || isAdmin)
                         {
                             <div class="mt-2">
                                 <span class="badge @GetStatusBadgeClass(eventItem.Status)">
-                                    @eventItem.Status
+                                    @GetStatusLabel(eventItem.Status)
                                 </span>
                             </div>
                         }
@@ -147,46 +147,63 @@
 
     private async Task LoadEventData()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            isAdmin = user.IsInRole("Admin");
+        }
+
         eventItem = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
 
-        if (eventItem != null)
+        if (eventItem == null)
         {
-            registeredCount = await Db.Registrations.CountAsync(r => r.EventId == eventItem.Id);
+            isLoading = false;
+            return;
+        }
 
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+        var isOwnerManager =
+            user.Identity?.IsAuthenticated == true &&
+            user.IsInRole("EventManager") &&
+            currentUserId == eventItem.CreatorId;
 
-            if (user.Identity?.IsAuthenticated == true)
+        // Public users and attendees can open only Active events
+        if (!isAdmin && !isOwnerManager && eventItem.Status != "Active")
+        {
+            eventItem = null;
+            isLoading = false;
+            return;
+        }
+
+        registeredCount = await Db.Registrations.CountAsync(r => r.EventId == eventItem.Id);
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            if (user.IsInRole("Attendee") && eventItem.Status == "Active")
             {
-                currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+                canRegister = true;
 
-                isAdmin = user.IsInRole("Admin");
+                var existingRegistration = await Db.Registrations
+                    .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == currentUserId);
 
-                if (user.IsInRole("Attendee"))
+                if (existingRegistration != null)
                 {
-                    canRegister = true;
-
-                    var existingRegistration = await Db.Registrations
-                        .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == currentUserId);
-
-                    if (existingRegistration != null)
-                    {
-                        isAlreadyRegistered = true;
-                        currentRegistrationId = existingRegistration.Id;
-                    }
+                    isAlreadyRegistered = true;
+                    currentRegistrationId = existingRegistration.Id;
                 }
-
-                if (user.IsInRole("EventManager") && currentUserId == eventItem.CreatorId)
-                {
-                    canManageEvent = true;
-                }
-
-                showManagerAdminNote =
-                    user.IsInRole("EventManager") &&
-                    currentUserId == eventItem.CreatorId &&
-                    eventItem.Status == "Flagged" &&
-                    !string.IsNullOrWhiteSpace(eventItem.AdminNote);
             }
+
+            if (isOwnerManager)
+            {
+                canManageEvent = true;
+            }
+
+            showManagerAdminNote =
+                isOwnerManager &&
+                eventItem.Status == "Flagged" &&
+                !string.IsNullOrWhiteSpace(eventItem.AdminNote);
         }
 
         isLoading = false;
@@ -215,6 +232,13 @@
             if (!user.IsInRole("Attendee"))
             {
                 message = "Only attendees can register for events.";
+                messageCss = "alert-warning";
+                return;
+            }
+
+            if (eventItem.Status != "Active")
+            {
+                message = "This event is currently not available for registration.";
                 messageCss = "alert-warning";
                 return;
             }
@@ -323,7 +347,14 @@
     {
         "Active" => "bg-success",
         "Flagged" => "bg-warning text-dark",
+        "PendingReview" => "bg-info text-dark",
         "Hidden" => "bg-secondary",
         _ => "bg-light text-dark"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "PendingReview" => "Pending Review",
+        _ => status
     };
 }

@@ -57,7 +57,7 @@
                             <td>@ev.Registrations.Count / @ev.Capacity</td>
                             <td>
                                 <span class="badge @GetStatusBadgeClass(ev.Status)">
-                                    @ev.Status
+                                    @GetStatusLabel(ev.Status)
                                 </span>
                             </td>
                             <td>
@@ -113,5 +113,11 @@
         "PendingReview" => "bg-info text-dark",
         "Hidden" => "bg-secondary",
         _ => "bg-light text-dark"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "PendingReview" => "Pending Review",
+        _ => status
     };
 }
