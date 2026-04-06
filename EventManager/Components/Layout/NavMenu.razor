@@ -211,7 +211,218 @@
     </RadzenCard>
 </div>
 
+<style>
+    .app-sidebar {
+        width: 320px;
+        min-width: 320px;
+        height: 100vh;
+        padding: 1rem;
+        background: #f5f7fb;
+        transition: width 0.25s ease, min-width 0.25s ease;
+    }
 
+    .app-sidebar.collapsed {
+        width: 110px;
+        min-width: 110px;
+    }
+
+    .sidebar-card {
+        height: calc(100vh - 2rem);
+        border-radius: 30px;
+        border: 1px solid #e8edf5;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .sidebar-stack {
+        height: 100%;
+    }
+
+    .sidebar-header {
+        padding: 1.2rem 1.1rem 1rem 1.1rem;
+    }
+
+    .sidebar-header-collapsed {
+        padding: 1.15rem 0 0.55rem 0;
+    }
+
+    .collapsed-inner {
+        width: 56px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .brand-row {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .brand-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #5b6df9 0%, #6f86ff 100%);
+        box-shadow: 0 10px 24px rgba(91, 109, 249, 0.28);
+        flex-shrink: 0;
+    }
+
+    .brand-icon {
+        color: white;
+        font-size: 24px;
+    }
+
+    .brand-copy {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .brand-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1.1;
+        color: #122033;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .brand-subtitle {
+        margin-top: 0.2rem;
+        font-size: 0.82rem;
+        color: #64748b;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sidebar-toggle {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px !important;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .collapsed-toggle {
+        margin: 0;
+    }
+
+    .menu-divider {
+        margin: 0 !important;
+    }
+
+    .sidebar-nav {
+        padding: 1rem 0.8rem;
+    }
+
+    .sidebar-nav-collapsed {
+        padding: 0.35rem 0 1rem 0;
+    }
+
+    .menu-full {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    .menu-full .rz-navigation-item-wrapper {
+        margin-bottom: 0.45rem;
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .menu-full .rz-navigation-item-link {
+        min-height: 54px;
+        border-radius: 18px;
+        color: #24364a;
+        font-weight: 600;
+        font-size: 1rem;
+        padding-left: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .menu-full .rz-navigation-item-link:hover {
+        background: #edf2ff;
+        color: #3158f5;
+    }
+
+    .menu-full .rz-state-active > .rz-navigation-item-link,
+    .menu-full .rz-navigation-item-link.rz-state-active {
+        background: linear-gradient(90deg, #eceeff 0%, #e8edff 100%);
+        color: #4254d8;
+    }
+
+    .menu-collapsed {
+        align-items: center;
+        padding-top: 0;
+        width: 56px;
+    }
+
+    .collapsed-nav-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+    }
+
+    .sidebar-fill {
+        flex: 1;
+    }
+
+    .profile-block {
+        padding: 1rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .profile-block:hover {
+        background: rgba(91, 109, 249, 0.06);
+    }
+
+    .profile-avatar {
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, #7c66ff 0%, #5b6df9 100%) !important;
+        color: white !important;
+        font-weight: 700;
+        flex-shrink: 0;
+        border-radius: 14px !important;
+    }
+
+    .profile-copy {
+        min-width: 0;
+    }
+
+    .profile-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #162334;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.35rem;
+    }
+
+    .profile-role {
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+</style>
 
 @code {
     private bool isCollapsed = false;
