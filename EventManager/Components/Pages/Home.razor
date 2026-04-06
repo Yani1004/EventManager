@@ -212,7 +212,7 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
         isAuthenticated = user.Identity?.IsAuthenticated ?? false;
         isAdmin = user.IsInRole("Admin");
         isEventManager = user.IsInRole("EventManager");
