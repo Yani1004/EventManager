@@ -1,208 +1,410 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 
-@using EventManager.Data
-@using EventManager.Models
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
-@inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
-<div class="home-page">
-    <section class="hero-section">
-        <div class="hero-shell">
-            @if (featuredEvents.Any())
-            {
-                var ev = featuredEvents[currentSlideIndex];
+<div class="welcome-page">
+    <div class="welcome-shell">
 
-                <div class="hero-carousel-card">
-                    <div class="hero-image-side">
-                        <img src="@GetImage(ev)" alt="@ev.Title" class="hero-image" />
-                        <div class="hero-image-overlay"></div>
-                    </div>
+        <!-- HERO -->
+        <RadzenCard class="hero-card">
+            <RadzenRow Gap="2rem" AlignItems="AlignItems.Center">
 
-                    <div class="hero-content-side">
-                        <span class="hero-badge">Featured Event</span>
+                <RadzenColumn Size="12" SizeLG="7">
+                    <RadzenStack Gap="1.5rem" class="hero-left">
+                        <RadzenBadge Text="WELCOME TO EVENTMANAGER"
+                                     Variant="Variant.Flat"
+                                     Shade="Shade.Light"
+                                     class="hero-badge" />
 
-                        @if (!string.IsNullOrWhiteSpace(ev.Category))
-                        {
-                            <div class="hero-category">@ev.Category</div>
-                        }
-
-                        <h1>@ev.Title</h1>
-
-                        <div class="hero-meta">
-                            <span>@ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
-                            <span>@ev.Location</span>
+                        <div>
+                            <RadzenText TextStyle="TextStyle.H1" TagName="TagName.H1" class="hero-title">
+                                Discover events,
+                                <br />
+                                create experiences,
+                                <br />
+                                stay connected.
+                            </RadzenText>
                         </div>
 
-                        <p class="hero-description">
-                            @Shorten(ev.Description, 140)
-                        </p>
+                        <RadzenText TextStyle="TextStyle.Body1" class="hero-subtitle">
+                            Explore upcoming events, register with ease, and manage everything in one modern event platform.
+                        </RadzenText>
 
-                        <div class="hero-actions">
-                            <a class="btn btn-dark btn-lg" href="/events/@ev.Id">View Details</a>
+                        <RadzenStack Orientation="Orientation.Horizontal"
+                                     Gap="1rem"
+                                     Wrap="FlexWrap.Wrap"
+                                     class="hero-actions">
+                            <RadzenButton Text="Browse Events"
+                                          Icon="travel_explore"
+                                          Size="ButtonSize.Large"
+                                          ButtonStyle="ButtonStyle.Primary"
+                                          class="hero-primary-btn"
+                                          Click="@(() => NavigateTo("/events"))" />
 
                             @if (!isAuthenticated)
                             {
-                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
-                            }
-                            else if (isEventManager)
-                            {
-                                <a class="btn btn-outline-dark btn-lg" href="/my-events">My Events</a>
+                                <RadzenButton Text="Create Account"
+                                              Icon="person_add"
+                                              Size="ButtonSize.Large"
+                                              Variant="Variant.Outlined"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              class="hero-secondary-btn"
+                                              Click="@(() => NavigateTo("/register"))" />
                             }
                             else if (isAttendee)
                             {
-                                <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
+                                <RadzenButton Text="My Registrations"
+                                              Icon="confirmation_number"
+                                              Size="ButtonSize.Large"
+                                              Variant="Variant.Outlined"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              class="hero-secondary-btn"
+                                              Click="@(() => NavigateTo("/my-registrations"))" />
+                            }
+                            else if (isEventManager)
+                            {
+                                <RadzenButton Text="My Events"
+                                              Icon="event_note"
+                                              Size="ButtonSize.Large"
+                                              Variant="Variant.Outlined"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              class="hero-secondary-btn"
+                                              Click="@(() => NavigateTo("/my-events"))" />
                             }
                             else if (isAdmin)
                             {
-                                <a class="btn btn-outline-dark btn-lg" href="/admin">Admin Panel</a>
+                                <RadzenButton Text="Admin Panel"
+                                              Icon="admin_panel_settings"
+                                              Size="ButtonSize.Large"
+                                              Variant="Variant.Outlined"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              class="hero-secondary-btn"
+                                              Click="@(() => NavigateTo("/admin"))" />
                             }
-                            else
-                            {
-                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
-                            }
-                        </div>
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenColumn>
 
-                        @if (featuredEvents.Count > 1)
-                        {
-                            <div class="carousel-controls">
-                                <button class="carousel-arrow" @onclick="PreviousSlide" type="button" aria-label="Previous slide">‹</button>
+                <RadzenColumn Size="12" SizeLG="5">
+                    <RadzenCard class="hero-visual-card">
+                        <RadzenStack Gap="1.25rem">
+                            <div class="hero-visual-icon">
+                                <RadzenIcon Icon="event" />
+                            </div>
 
-                                <div class="carousel-dots">
-                                    @for (int i = 0; i < featuredEvents.Count; i++)
-                                    {
-                                        <button class="dot @(i == currentSlideIndex ? "active" : "")"
-                                                @onclick="() => GoToSlide(i)"
-                                                type="button"
-                                                aria-label="Go to slide @(i + 1)">
-                                        </button>
-                                    }
+                            <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H2" class="hero-visual-title">
+                                All your event activity in one place
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.Body2" class="hero-visual-subtitle">
+                                A smooth experience for attendees, organizers, and administrators.
+                            </RadzenText>
+
+                            <RadzenStack Gap="0.85rem" class="hero-visual-list">
+                                <div class="visual-pill">
+                                    <RadzenIcon Icon="explore" />
+                                    <span>Browse events</span>
                                 </div>
 
-                                <button class="carousel-arrow" @onclick="NextSlide" type="button" aria-label="Next slide">›</button>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="hero-empty">
-                    <div class="hero-empty-content">
-                        <span class="hero-badge">Welcome</span>
-                        <h1>Discover events worth attending</h1>
-                        <p>
-                            Explore upcoming events, register easily, and stay connected with experiences that matter to you.
-                        </p>
+                                <div class="visual-pill">
+                                    <RadzenIcon Icon="how_to_reg" />
+                                    <span>Quick registration</span>
+                                </div>
 
-                        <div class="hero-actions">
-                            @if (!isAuthenticated)
-                            {
-                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                                <a class="btn btn-outline-dark btn-lg" href="/register">Register</a>
-                            }
-                            else if (isAttendee)
-                            {
-                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                                <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
-                            }
-                            else if (isEventManager)
-                            {
-                                <a class="btn btn-dark btn-lg" href="/my-events">My Events</a>
-                                <a class="btn btn-outline-dark btn-lg" href="/events/create">Create Event</a>
-                            }
-                            else if (isAdmin)
-                            {
-                                <a class="btn btn-dark btn-lg" href="/admin">Admin Panel</a>
-                                <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
-                            }
-                            else
-                            {
-                                <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                            }
+                                <div class="visual-pill">
+                                    <RadzenIcon Icon="dashboard_customize" />
+                                    <span>Organizer workflow</span>
+                                </div>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
+
+            </RadzenRow>
+        </RadzenCard>
+
+        <!-- HIGHLIGHTS -->
+        <RadzenRow Gap="1.25rem" class="highlights-row">
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard class="highlight-card">
+                    <RadzenStack Gap="0.75rem">
+                        <div class="highlight-icon-wrap">
+                            <RadzenIcon Icon="travel_explore" class="highlight-icon" />
                         </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </section>
+                        <RadzenText TextStyle="TextStyle.H5" class="highlight-title">Discover</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="highlight-text">
+                            Explore upcoming events in one organized place.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-    <section class="home-info-section">
-        <div class="section-header-center">
-            <h2>About the Platform</h2>
-            <p>
-                A simple place to discover events, join experiences, and manage event activity.
-            </p>
-        </div>
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard class="highlight-card">
+                    <RadzenStack Gap="0.75rem">
+                        <div class="highlight-icon-wrap">
+                            <RadzenIcon Icon="groups" class="highlight-icon" />
+                        </div>
+                        <RadzenText TextStyle="TextStyle.H5" class="highlight-title">Join</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="highlight-text">
+                            Register in just a few clicks and keep track of your plans.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-        <div class="info-grid">
-            <div class="info-card">
-                <h3>Browse Events</h3>
-                <p>
-                    Explore concerts, workshops, conferences, sports events, and more in one organized place.
-                </p>
-            </div>
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard class="highlight-card">
+                    <RadzenStack Gap="0.75rem">
+                        <div class="highlight-icon-wrap">
+                            <RadzenIcon Icon="edit_calendar" class="highlight-icon" />
+                        </div>
+                        <RadzenText TextStyle="TextStyle.H5" class="highlight-title">Manage</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="highlight-text">
+                            Create and manage your own events with a simple workflow.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
 
-            <div class="info-card">
-                <h3>Easy Registration</h3>
-                <p>
-                    Attendees can quickly register for events and keep track of their upcoming plans.
-                </p>
-            </div>
+        <!-- CTA -->
+        <RadzenCard class="cta-card">
+            <RadzenRow AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="8">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="cta-title">
+                            Ready to get started?
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body1" class="cta-subtitle">
+                            Browse what’s coming up and start using EventManager today.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenColumn>
 
-            <div class="info-card">
-                <h3>Event Management</h3>
-                <p>
-                    Event managers can create, edit, and monitor their events through a dedicated workflow.
-                </p>
-            </div>
-        </div>
-    </section>
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 JustifyContent="JustifyContent.End"
+                                 Gap="0.85rem"
+                                 Wrap="FlexWrap.Wrap"
+                                 class="cta-actions">
+                        <RadzenButton Text="Browse Events"
+                                      Icon="arrow_forward"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Size="ButtonSize.Large"
+                                      class="cta-primary-btn"
+                                      Click="@(() => NavigateTo("/events"))" />
 
-    <section class="home-cta-section">
-        <div class="cta-box">
-            <h2>Ready to explore upcoming events?</h2>
-            <p>Find your next event and see what is happening now.</p>
+                        @if (!isAuthenticated)
+                        {
+                            <RadzenButton Text="Register"
+                                          Icon="person_add"
+                                          Variant="Variant.Outlined"
+                                          ButtonStyle="ButtonStyle.Secondary"
+                                          Size="ButtonSize.Large"
+                                          class="cta-secondary-btn"
+                                          Click="@(() => NavigateTo("/register"))" />
+                        }
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
 
-            <div class="cta-actions">
-                @if (!isAuthenticated)
-                {
-                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                    <a class="btn btn-outline-dark btn-lg" href="/register">Register</a>
-                }
-                else if (isAttendee)
-                {
-                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                    <a class="btn btn-outline-dark btn-lg" href="/my-registrations">My Registrations</a>
-                }
-                else if (isEventManager)
-                {
-                    <a class="btn btn-dark btn-lg" href="/my-events">My Events</a>
-                    <a class="btn btn-outline-dark btn-lg" href="/events/create">Create Event</a>
-                }
-                else if (isAdmin)
-                {
-                    <a class="btn btn-dark btn-lg" href="/admin">Admin Panel</a>
-                    <a class="btn btn-outline-dark btn-lg" href="/events">Browse Events</a>
-                }
-                else
-                {
-                    <a class="btn btn-dark btn-lg" href="/events">Browse Events</a>
-                }
-            </div>
-        </div>
-    </section>
+    </div>
 </div>
 
-@code {
-    private List<Event> featuredEvents = new();
-    private int currentSlideIndex = 0;
+<style>
+    .welcome-page {
+        min-height: 100%;
+        padding: 2rem 1rem 2.5rem;
+        /* background: radial-gradient(circle at top left, rgba(63, 81, 181, 0.14), transparent 30%), radial-gradient(circle at bottom right, rgba(33, 150, 243, 0.10), transparent 28%), linear-gradient(135deg, #f8fafc 0%, #eef4ff 55%, #f8fbff 100%); */
+    }
 
+    .welcome-shell {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+    }
+
+    .hero-card {
+        border: none;
+        border-radius: 30px;
+        padding: 2.5rem;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);
+        overflow: hidden;
+    }
+
+    .hero-left {
+        padding-right: 0.5rem;
+    }
+
+    .hero-badge {
+        width: fit-content;
+        border-radius: 999px;
+        padding: 0.4rem 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+    }
+
+    .hero-title {
+        margin: 0;
+        font-size: clamp(2.6rem, 5vw, 4.4rem);
+        line-height: 1.08;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: #0f172a;
+    }
+
+    .hero-subtitle {
+        max-width: 620px;
+        font-size: 1.08rem;
+        line-height: 1.75;
+        color: #64748b;
+    }
+
+    .hero-actions {
+        padding-top: 0.25rem;
+    }
+
+    .hero-primary-btn,
+    .hero-secondary-btn,
+    .cta-primary-btn,
+    .cta-secondary-btn {
+        min-height: 50px;
+        border-radius: 14px !important;
+    }
+
+    .hero-primary-btn {
+        box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+    }
+
+    .hero-visual-card {
+        border: none;
+        border-radius: 28px;
+        padding: 2rem;
+        background: linear-gradient(160deg, #1e3a8a 0%, #2563eb 58%, #3b82f6 100%);
+        color: white;
+        box-shadow: 0 24px 50px rgba(30, 58, 138, 0.20);
+        height: 100%;
+    }
+
+    .hero-visual-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.14);
+    }
+
+        .hero-visual-icon .rzi {
+            font-size: 2rem;
+            color: white;
+        }
+
+    .hero-visual-title {
+        margin: 0;
+        color: white;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .hero-visual-subtitle {
+        color: rgba(255,255,255,0.82);
+        line-height: 1.7;
+    }
+
+    .hero-visual-list {
+        margin-top: 0.25rem;
+    }
+
+    .visual-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.95rem 1rem;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.10);
+        color: white;
+        font-weight: 600;
+    }
+
+        .visual-pill .rzi {
+            font-size: 1.1rem;
+        }
+
+    .highlights-row {
+        margin-top: 1.4rem;
+    }
+
+    .highlight-card {
+        border: none;
+        border-radius: 22px;
+        padding: 1.6rem;
+        height: 100%;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.07);
+    }
+
+    .highlight-icon-wrap {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(160deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.18));
+    }
+
+    .highlight-icon {
+        font-size: 1.45rem;
+        color: #2563eb;
+    }
+
+    .highlight-title {
+        margin: 0;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .highlight-text {
+        color: #64748b;
+        line-height: 1.7;
+    }
+
+    .cta-card {
+        margin-top: 1.2rem;
+        border: none;
+        border-radius: 28px;
+        padding: 1.7rem 1.8rem;
+        background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(238,244,255,0.96));
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+    }
+
+    .cta-title {
+        margin: 0;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .cta-subtitle {
+        color: #64748b;
+    }
+
+</style>
+
+@code {
     private bool isAuthenticated;
     private bool isAdmin;
     private bool isEventManager;
@@ -212,58 +414,15 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+
         isAuthenticated = user.Identity?.IsAuthenticated ?? false;
         isAdmin = user.IsInRole("Admin");
         isEventManager = user.IsInRole("EventManager");
         isAttendee = user.IsInRole("Attendee");
-
-        var now = DateTime.UtcNow;
-
-        featuredEvents = await Db.Events
-            .Where(e => e.Status == "Active" && e.Date >= now)
-            .OrderBy(e => e.Date)
-            .Take(3)
-            .ToListAsync();
     }
 
-    private void NextSlide()
+    private void NavigateTo(string url)
     {
-        if (featuredEvents.Count == 0)
-            return;
-
-        currentSlideIndex = (currentSlideIndex + 1) % featuredEvents.Count;
-    }
-
-    private void PreviousSlide()
-    {
-        if (featuredEvents.Count == 0)
-            return;
-
-        currentSlideIndex = (currentSlideIndex - 1 + featuredEvents.Count) % featuredEvents.Count;
-    }
-
-    private void GoToSlide(int index)
-    {
-        currentSlideIndex = index;
-    }
-
-    private static string GetImage(Event ev)
-    {
-        if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
-            return ev.ImageUrl;
-
-        return "https://via.placeholder.com/1200x700?text=Event+Image";
-    }
-
-    private static string Shorten(string? text, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return "No description available.";
-
-        if (text.Length <= maxLength)
-            return text;
-
-        return text[..maxLength] + "...";
+        Navigation.NavigateTo(url);
     }
 }

@@ -213,18 +213,23 @@
 
 <style>
     .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 320px;
         min-width: 320px;
         height: 100vh;
         padding: 1rem;
         background: #f5f7fb;
         transition: width 0.25s ease, min-width 0.25s ease;
+        z-index: 1000;
+        box-sizing: border-box;
     }
 
-    .app-sidebar.collapsed {
-        width: 110px;
-        min-width: 110px;
-    }
+        .app-sidebar.collapsed {
+            width: 120px;
+            min-width: 120px;
+        }
 
     .sidebar-card {
         height: calc(100vh - 2rem);
