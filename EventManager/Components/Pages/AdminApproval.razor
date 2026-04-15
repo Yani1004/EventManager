@@ -5,137 +5,429 @@
 @using EventManager.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
 @inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
 
 <PageTitle>Approve Event Managers</PageTitle>
 
-<div class="container py-4">
+<div class="approvals-page">
+    <RadzenStack Gap="1.5rem" class="approvals-shell">
 
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-        <div>
-            <h1 class="fw-bold mb-1">Pending Event Manager Requests</h1>
-            <p class="text-muted mb-0">Approve or reject users who want to become event managers.</p>
-        </div>
+        <RadzenCard class="approvals-hero">
+            <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="8">
+                    <RadzenStack Gap="0.5rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                            <div class="hero-icon-wrap">
+                                <RadzenIcon Icon="how_to_reg" class="hero-icon" />
+                            </div>
 
-        <div class="mt-3 mt-md-0">
-            <a href="/admin" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to dashboard
-            </a>
-        </div>
-    </div>
+                            <div>
+                                <div class="hero-title">Pending Event Manager Requests</div>
+                                <div class="hero-subtitle">
+                                    Review, approve, or reject users who want to become event managers.
+                                </div>
+                            </div>
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenColumn>
 
-    @if (!string.IsNullOrWhiteSpace(Message))
-    {
-        <div class="alert @messageCss alert-dismissible fade show">
-            @Message
-            <button class="btn-close" @onclick="ClearMessage"></button>
-        </div>
-    }
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 JustifyContent="JustifyContent.End"
+                                 AlignItems="AlignItems.Center"
+                                 Gap="0.75rem"
+                                 class="hero-actions">
+                        <RadzenButton Text="Back to Dashboard"
+                                      Icon="arrow_back"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      Variant="Variant.Outlined"
+                                      Size="ButtonSize.Large"
+                                      class="dashboard-back-btn"
+                                      Click='@(() => NavigationManager.NavigateTo("/admin"))' />
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
 
-    @if (isLoading)
-    {
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="spinner-border text-primary"></div>
-                    <span>Loading pending requests...</span>
-                </div>
-            </div>
-        </div>
-    }
-    else if (pendingUsers.Count == 0)
-    {
-        <div class="alert alert-info shadow-sm">
-            There are no pending Event Manager requests.
-        </div>
-    }
-    else
-    {
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-0">
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <RadzenAlert AlertStyle="@(messageCss == "success" ? AlertStyle.Success : AlertStyle.Danger)"
+                         Variant="Variant.Flat"
+                         Shade="Shade.Light"
+                         AllowClose="true"
+                         Close="@ClearMessage">
+                @Message
+            </RadzenAlert>
+        }
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+        @if (isLoading)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             JustifyContent="JustifyContent.Center"
+                             Gap="1rem"
+                             class="state-stack">
+                    <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+                    <RadzenStack Gap="0.35rem">
+                        <div class="state-title">Loading requests</div>
+                        <div class="state-subtitle">Please wait while pending approvals are loaded.</div>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else if (pendingUsers.Count == 0)
+        {
+            <RadzenCard class="empty-card">
+                <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="1rem" class="empty-stack">
+                    <div class="empty-icon-wrap">
+                        <RadzenIcon Icon="task_alt" class="empty-icon" />
+                    </div>
 
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width:60px;">#</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Email</th>
-                                <th>Requested Role</th>
-                                <th>Status</th>
-                                <th class="text-center" style="width:160px;">Actions</th>
-                            </tr>
-                        </thead>
+                    <RadzenStack AlignItems="AlignItems.Center" Gap="0.35rem">
+                        <div class="empty-title">No pending requests</div>
+                        <div class="empty-subtitle">There are currently no users waiting for Event Manager approval.</div>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeLG="4">
+                    <RadzenCard class="stat-card">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                            <div class="stat-icon stat-icon-primary">
+                                <RadzenIcon Icon="pending_actions" />
+                            </div>
 
-                        <tbody>
+                            <RadzenStack Gap="0.25rem">
+                                <div class="stat-value">@pendingUsers.Count</div>
+                                <div class="stat-label">Pending approvals</div>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
 
-                            @for (int i = 0; i < pendingUsers.Count; i++)
-                            {
-                                var user = pendingUsers[i];
+                <RadzenColumn Size="12" SizeLG="4">
+                    <RadzenCard class="stat-card">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                            <div class="stat-icon stat-icon-success">
+                                <RadzenIcon Icon="verified_user" />
+                            </div>
 
-                                <tr>
+                            <RadzenStack Gap="0.25rem">
+                                <div class="stat-value">@pendingUsers.Count(u => u.RequestedRole == "EventManager")</div>
+                                <div class="stat-label">Manager requests</div>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
 
-                                    <td>@(i + 1)</td>
+                <RadzenColumn Size="12" SizeLG="4">
+                    <RadzenCard class="stat-card">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                            <div class="stat-icon stat-icon-warning">
+                                <RadzenIcon Icon="admin_panel_settings" />
+                            </div>
 
-                                    <td>@user.FirstName</td>
+                            <RadzenStack Gap="0.25rem">
+                                <div class="stat-value">Admin</div>
+                                <div class="stat-label">Approval access active</div>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
+            </RadzenRow>
 
-                                    <td>@user.LastName</td>
+            <RadzenCard class="grid-card">
+                <RadzenDataGrid Data="@pendingUsers"
+                                TItem="PendingEventManagerViewModel"
+                                AllowPaging="true"
+                                PageSize="8"
+                                AllowSorting="true"
+                                AllowFiltering="false"
+                                Responsive="true"
+                                GridLines="DataGridGridLines.None"
+                                RowHover="true"
+                                class="approvals-grid">
 
-                                    <td>@user.Email</td>
+                    <HeaderTemplate>
+                        <RadzenStack Orientation="Orientation.Horizontal"
+                                     AlignItems="AlignItems.Center"
+                                     JustifyContent="JustifyContent.SpaceBetween"
+                                     Gap="1rem"
+                                     class="grid-header">
+                            <RadzenStack Gap="0.2rem">
+                                <div class="grid-title">Approval Queue</div>
+                                <div class="grid-subtitle">Manage pending users and update their access.</div>
+                            </RadzenStack>
 
-                                    <td>@user.RequestedRole</td>
+                            <RadzenBadge Text="@($"{pendingUsers.Count} Pending")"
+                                         BadgeStyle="BadgeStyle.Warning"
+                                         Shade="Shade.Light" />
+                        </RadzenStack>
+                    </HeaderTemplate>
 
-                                    <td>
-                                        <span class="badge bg-warning text-dark">
-                                            Pending
-                                        </span>
-                                    </td>
+                    <Columns>
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="#" Width="70px" Sortable="false" Filterable="false">
+                            <Template Context="user">
+                                @(pendingUsers.IndexOf(user) + 1)
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                    <td class="text-center">
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="FirstName" Title="First Name" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="LastName" Title="Last Name" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="Email" Title="Email" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="RequestedRole" Title="Requested Role" />
 
-                                        <div class="d-flex justify-content-center gap-2">
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="Status" Width="140px" Sortable="false" Filterable="false">
+                            <Template Context="user">
+                                <RadzenBadge Text="Pending"
+                                             BadgeStyle="BadgeStyle.Warning"
+                                             Shade="Shade.Light" />
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                            <button class="btn btn-success btn-sm"
-                                                    disabled="@isProcessing"
-                                                    title="Approve"
-                                                    @onclick="() => ApproveUser(user.Id)">
-                                                <i class="bi bi-check-lg"></i>
-                                            </button>
+                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="Actions" Width="190px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                            <Template Context="user">
+                                <RadzenStack Orientation="Orientation.Horizontal"
+                                             AlignItems="AlignItems.Center"
+                                             JustifyContent="JustifyContent.Center"
+                                             Gap="0.5rem">
+                                    <RadzenButton Icon="check_circle"
+                                                  ButtonStyle="ButtonStyle.Success"
+                                                  Variant="Variant.Flat"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => ApproveUser(user.Id))' />
 
-                                            <button class="btn btn-danger btn-sm"
-                                                    disabled="@isProcessing"
-                                                    title="Reject"
-                                                    @onclick="() => RejectUser(user.Id)">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-                            }
-
-                        </tbody>
-
-                    </table>
-                </div>
-
-            </div>
-        </div>
-    }
-
+                                    <RadzenButton Icon="cancel"
+                                                  ButtonStyle="ButtonStyle.Danger"
+                                                  Variant="Variant.Flat"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => RejectUser(user.Id))' />
+                                </RadzenStack>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenCard>
+        }
+    </RadzenStack>
 </div>
 
-@code {
+<style>
+    .approvals-page {
+        padding: 1.5rem;
+        background: linear-gradient(180deg, #f6f8fc 0%, #eef3f9 100%);
+        min-height: calc(100vh - 2rem);
+    }
 
+    .approvals-shell {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .approvals-hero,
+    .grid-card,
+    .stat-card,
+    .state-card,
+    .empty-card {
+        border-radius: 28px;
+        border: 1px solid #e7edf5;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    }
+
+    .dashboard-back-btn {
+        min-height: 48px;
+        padding: 0 1.15rem;
+        border-radius: 14px !important;
+        font-weight: 600;
+    }
+
+    .approvals-hero {
+        padding: 0.5rem;
+    }
+
+    .hero-icon-wrap {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #5b6df9 0%, #7c66ff 100%);
+        box-shadow: 0 12px 24px rgba(91, 109, 249, 0.25);
+        flex-shrink: 0;
+    }
+
+    .hero-icon {
+        color: white;
+        font-size: 28px;
+    }
+
+    .hero-title {
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: #15263a;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 0.98rem;
+        color: #6b7a90;
+        line-height: 1.5;
+    }
+
+    .hero-actions {
+        height: 100%;
+    }
+
+    .stat-card {
+        padding: 0.35rem;
+    }
+
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .stat-icon-primary {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .stat-icon-success {
+        background: #ecfdf3;
+        color: #16a34a;
+    }
+
+    .stat-icon-warning {
+        background: #fff7ed;
+        color: #ea580c;
+    }
+
+    .stat-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #142236;
+        line-height: 1.1;
+    }
+
+    .stat-label {
+        font-size: 0.92rem;
+        color: #708197;
+    }
+
+    .grid-card {
+        overflow: hidden;
+    }
+
+    .grid-header {
+        padding: 0.4rem 0.2rem 1rem 0.2rem;
+    }
+
+    .grid-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #142236;
+    }
+
+    .grid-subtitle {
+        font-size: 0.9rem;
+        color: #708197;
+    }
+
+    .state-card,
+    .empty-card {
+        padding: 2rem;
+    }
+
+    .state-stack,
+    .empty-stack {
+        min-height: 220px;
+    }
+
+    .state-title,
+    .empty-title {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #162336;
+    }
+
+    .state-subtitle,
+    .empty-subtitle {
+        font-size: 0.95rem;
+        color: #708197;
+    }
+
+    .empty-icon-wrap {
+        width: 74px;
+        height: 74px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #ecfdf3 0%, #dff7e8 100%);
+    }
+
+    .empty-icon {
+        font-size: 34px;
+        color: #16a34a;
+    }
+
+    .approvals-grid .rz-datatable-tablewrapper table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .approvals-grid .rz-column-title {
+        font-weight: 700;
+    }
+
+    .approvals-grid .rz-cell-data,
+    .approvals-grid .rz-sortable-column {
+        color: #1f2f43;
+    }
+
+    .approvals-grid .rz-datatable-data tr td {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .approvals-grid .rz-datatable-data tr:hover {
+        background: #f8fbff;
+    }
+
+    @@media (max-width: 768px) {
+        .approvals-page {
+            padding: 1rem;
+        }
+
+        .hero-title {
+            font-size: 1.3rem;
+        }
+    }
+</style>
+
+@code {
     private List<PendingEventManagerViewModel> pendingUsers = new();
 
     private string? Message;
-    private string messageCss = "alert-success";
+    private string messageCss = "success";
 
     private bool isLoading = true;
     private bool isProcessing;
@@ -254,18 +546,17 @@
     private void ShowSuccess(string message)
     {
         Message = message;
-        messageCss = "alert-success";
+        messageCss = "success";
     }
 
     private void ShowError(string message)
     {
         Message = message;
-        messageCss = "alert-danger";
+        messageCss = "error";
     }
-    //code
+
     private void ClearMessage()
     {
         Message = null;
     }
-
 }

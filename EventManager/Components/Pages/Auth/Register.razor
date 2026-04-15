@@ -3,118 +3,544 @@
 
 @using EventManager.Models
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Components.Forms
+@using Radzen
+@using Radzen.Blazor
 
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 
 <PageTitle>Register</PageTitle>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-
-            <div class="card shadow border-0 register-card">
-                <div class="card-body p-4">
-
-                    <h3 class="mb-1">Create Account</h3>
-                    <p class="text-muted mb-4">Join the platform to explore and manage events.</p>
-
-                    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
-                    {
-                        <div class="alert alert-success">@SuccessMessage</div>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
-                    {
-                        <div class="alert alert-danger">@ErrorMessage</div>
-                    }
-
-                    <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
-
-                        <div class="row g-3">
-
-                            <div class="col-md-6">
-                                <label class="form-label">First Name</label>
-                                <InputText class="form-control" @bind-Value="registerModel.FirstName" />
-                                <ValidationMessage For="@(() => registerModel.FirstName)" />
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Last Name</label>
-                                <InputText class="form-control" @bind-Value="registerModel.LastName" />
-                                <ValidationMessage For="@(() => registerModel.LastName)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Username</label>
-                                <InputText class="form-control" @bind-Value="registerModel.Username" />
-                                <ValidationMessage For="@(() => registerModel.Username)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Email</label>
-                                <InputText class="form-control" @bind-Value="registerModel.Email" />
-                                <ValidationMessage For="@(() => registerModel.Email)" />
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Password</label>
-                                <InputText class="form-control" type="password" @bind-Value="registerModel.Password" />
-                                <ValidationMessage For="@(() => registerModel.Password)" />
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Confirm Password</label>
-                                <InputText class="form-control" type="password" @bind-Value="registerModel.ConfirmPassword" />
-                                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Register As</label>
-                                <InputSelect class="form-select" @bind-Value="registerModel.AccountType">
-                                    <option value="Attendee">Attendee</option>
-                                    <option value="EventManager">Event Manager</option>
-                                </InputSelect>
-                                <ValidationMessage For="@(() => registerModel.AccountType)" />
-                            </div>
-
+<div class="register-page">
+    <div class="register-shell">
+        <RadzenCard class="register-card">
+            <RadzenRow Gap="2rem" AlignItems="AlignItems.Stretch">
+                <RadzenColumn Size="12" SizeMD="5">
+                    <div class="register-side-panel">
+                        <div class="register-brand-badge">
+                            <RadzenIcon Icon="event" class="register-side-main-icon" />
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100 mt-4">
-                            Register
-                        </button>
+                        <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="register-side-title">
+                            Join
+                            <br />
+                            EventManager
+                        </RadzenText>
 
-                    </EditForm>
+                        <RadzenText TextStyle="TextStyle.Body1" class="register-side-subtitle">
+                            Create your account to discover events, manage registrations, and request organizer access.
+                        </RadzenText>
 
-                </div>
-            </div>
+                        <RadzenStack Gap="1rem" class="register-feature-list">
+                            <div class="register-feature-item">
+                                <div class="register-feature-icon">
+                                    <RadzenIcon Icon="confirmation_number" />
+                                </div>
+                                <div>
+                                    <div class="register-feature-title">Browse events</div>
+                                    <div class="register-feature-text">
+                                        Explore upcoming experiences and register in seconds.
+                                    </div>
+                                </div>
+                            </div>
 
-        </div>
+                            <div class="register-feature-item">
+                                <div class="register-feature-icon">
+                                    <RadzenIcon Icon="groups" />
+                                </div>
+                                <div>
+                                    <div class="register-feature-title">Choose your role</div>
+                                    <div class="register-feature-text">
+                                        Sign up as an attendee or request Event Manager approval.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="register-feature-item">
+                                <div class="register-feature-icon">
+                                    <RadzenIcon Icon="verified_user" />
+                                </div>
+                                <div>
+                                    <div class="register-feature-title">Secure access</div>
+                                    <div class="register-feature-text">
+                                        Your account is protected and role-based.
+                                    </div>
+                                </div>
+                            </div>
+                        </RadzenStack>
+                    </div>
+                </RadzenColumn>
+
+                <RadzenColumn Size="12" SizeMD="7">
+                    <div class="register-form-panel">
+                        <div class="register-form-header">
+                            <RadzenBadge Text="CREATE ACCOUNT"
+                                         Shade="Shade.Light"
+                                         Variant="Variant.Flat"
+                                         class="register-form-badge" />
+
+                            <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="register-form-title">
+                                Get started
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.Body2" class="register-form-subtitle">
+                                Fill in your details below to create your account.
+                            </RadzenText>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Success"
+                                         Variant="Variant.Flat"
+                                         Shade="Shade.Light"
+                                         class="register-message-alert">
+                                @SuccessMessage
+                            </RadzenAlert>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Danger"
+                                         Variant="Variant.Flat"
+                                         Shade="Shade.Light"
+                                         class="register-message-alert">
+                                @ErrorMessage
+                            </RadzenAlert>
+                        }
+
+                        <RadzenTemplateForm TItem="RegisterInputModel"
+                                            Data="@registerModel"
+                                            Submit="@HandleRegister"
+                                            class="register-form">
+
+                            <DataAnnotationsValidator />
+
+                            <RadzenRow Gap="1rem">
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="First Name" class="register-field-label" />
+                                        <RadzenTextBox @bind-Value="registerModel.FirstName"
+                                                       Name="FirstName"
+                                                       Placeholder="Enter first name"
+                                                       Style="width: 100%;"
+                                                       class="register-text-input" />
+                                        <RadzenRequiredValidator Component="FirstName"
+                                                                 Text="First name is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Last Name" class="register-field-label" />
+                                        <RadzenTextBox @bind-Value="registerModel.LastName"
+                                                       Name="LastName"
+                                                       Placeholder="Enter last name"
+                                                       Style="width: 100%;"
+                                                       class="register-text-input" />
+                                        <RadzenRequiredValidator Component="LastName"
+                                                                 Text="Last name is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Username" class="register-field-label" />
+                                        <RadzenTextBox @bind-Value="registerModel.Username"
+                                                       Name="Username"
+                                                       Placeholder="Choose a username"
+                                                       Style="width: 100%;"
+                                                       class="register-text-input" />
+                                        <RadzenRequiredValidator Component="Username"
+                                                                 Text="Username is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Email" class="register-field-label" />
+                                        <RadzenTextBox @bind-Value="registerModel.Email"
+                                                       Name="Email"
+                                                       Placeholder="Enter your email"
+                                                       Style="width: 100%;"
+                                                       class="register-text-input" />
+                                        <RadzenRequiredValidator Component="Email"
+                                                                 Text="Email is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenEmailValidator Component="Email"
+                                                              Text="Please enter a valid email address."
+                                                              Popup="false"
+                                                              Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Password" class="register-field-label" />
+                                        <RadzenPassword @bind-Value="registerModel.Password"
+                                                        Name="Password"
+                                                        Placeholder="Create password"
+                                                        Style="width: 100%;"
+                                                        ToggleMask="true"
+                                                        class="register-password-input" />
+                                        <RadzenRequiredValidator Component="Password"
+                                                                 Text="Password is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenRegexValidator Component="Password"
+                                                              Pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z\d]).{6,}$"
+                                                              Text="Password must be at least 6 characters and include uppercase, lowercase, number, and special character."
+                                                              Popup="false"
+                                                              Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Confirm Password" class="register-field-label" />
+                                        <RadzenPassword @bind-Value="registerModel.ConfirmPassword"
+                                                        Name="ConfirmPassword"
+                                                        Placeholder="Repeat password"
+                                                        Style="width: 100%;"
+                                                        ToggleMask="true"
+                                                        class="register-password-input" />
+                                        <RadzenRequiredValidator Component="ConfirmPassword"
+                                                                 Text="Please confirm your password."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenCompareValidator Component="ConfirmPassword"
+                                                                Value="@registerModel.Password"
+                                                                Text="Passwords do not match."
+                                                                Popup="false"
+                                                                Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenLabel Text="Register As" class="register-field-label" />
+                                        <RadzenDropDown @bind-Value="registerModel.AccountType"
+                                                        Name="AccountType"
+                                                        Data="@accountTypes"
+                                                        TextProperty="Text"
+                                                        ValueProperty="Value"
+                                                        Placeholder="Select account type"
+                                                        Style="width: 100%;"
+                                                        class="register-dropdown-input" />
+                                        <RadzenRequiredValidator Component="AccountType"
+                                                                 Text="Please select an account type."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                    </RadzenStack>
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12">
+                                    <div class="register-actions">
+                                        <RadzenButton ButtonType="ButtonType.Submit"
+                                                      Text="Create Account"
+                                                      Icon="person_add"
+                                                      Size="ButtonSize.Large"
+                                                      class="register-primary-button" />
+
+                                        <RadzenButton Text="Back to Login"
+                                                      Icon="login"
+                                                      Variant="Variant.Outlined"
+                                                      ButtonStyle="ButtonStyle.Secondary"
+                                                      Size="ButtonSize.Large"
+                                                      Click="@GoToLogin"
+                                                      class="register-secondary-button" />
+                                    </div>
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </RadzenTemplateForm>
+                    </div>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
     </div>
 </div>
 
 <style>
+    .register-page {
+        min-height: calc(100vh - 2rem);
+        padding: 2rem 1rem;
+        background: radial-gradient(circle at top left, rgba(63, 81, 181, 0.12), transparent 30%), radial-gradient(circle at bottom right, rgba(33, 150, 243, 0.10), transparent 28%), linear-gradient(135deg, #f8fafc 0%, #eef4ff 50%, #f8fbff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .register-shell {
+        width: 100%;
+        max-width: 1180px;
+    }
+
     .register-card {
+        border: none;
+        border-radius: 30px;
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.10);
+        overflow: hidden;
+    }
+
+    .register-side-panel {
+        height: 100%;
+        padding: 2.2rem;
+        border-radius: 26px;
+        background: linear-gradient(160deg, #2447c6 0%, #2f63f0 100%);
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .register-side-panel::before {
+            content: "";
+            position: absolute;
+            top: 35px;
+            left: -35px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+        }
+
+    .register-brand-badge {
+        width: 72px;
+        height: 72px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.14);
+        position: relative;
+        z-index: 1;
+    }
+
+    .register-side-main-icon {
+        color: white;
+        font-size: 2rem;
+    }
+
+    .register-side-title {
+        color: white;
+        font-size: 3.2rem;
+        font-weight: 800;
+        line-height: 1.08;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .register-side-subtitle {
+        color: rgba(255,255,255,0.86);
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+        max-width: 420px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .register-feature-list {
+        margin-top: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .register-feature-item {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        padding: 1.2rem;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.10);
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .register-feature-icon {
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.12);
+        color: white;
+    }
+
+    .register-feature-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .register-feature-text {
+        color: rgba(255,255,255,0.84);
+        font-size: 0.98rem;
+        line-height: 1.55;
+    }
+
+    .register-form-panel {
+        height: 100%;
+        padding: 2rem 1.5rem 2rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .register-form-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .register-form-badge {
+        margin-bottom: 0.9rem;
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    .register-form-title {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.45rem;
+    }
+
+    .register-form-subtitle {
+        color: #64748b;
+        font-size: 1.05rem;
+        line-height: 1.6;
+    }
+
+    .register-message-alert {
+        margin-bottom: 1rem;
         border-radius: 16px;
     }
 
-        .register-card h3 {
-            font-weight: 600;
+    .register-form {
+        margin-top: 0.5rem;
+    }
+
+    .register-field-label {
+        color: #334155;
+        font-weight: 700;
+        font-size: 0.98rem;
+    }
+
+    .register-actions {
+        display: flex;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .register-text-input,
+    .register-password-input,
+    .register-dropdown-input {
+        min-height: 48px;
+        padding-left: 0.95rem !important;
+        padding-right: 0.95rem !important;
+        border-radius: 14px !important;
+        border: 1px solid #dbe4f0 !important;
+        background-color: #f8fbff !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
+    }
+
+        .register-text-input:hover,
+        .register-password-input:hover,
+        .register-dropdown-input:hover {
+            border-color: #94a3b8 !important;
         }
 
-    .form-control,
-    .form-select {
-        border-radius: 8px;
+        .register-text-input:focus-within,
+        .register-password-input:focus-within,
+        .register-dropdown-input:focus-within {
+            border-color: #7c94ff !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08) !important;
+        }
+
+    .register-primary-button,
+    .register-secondary-button {
+        min-width: 180px;
+        border-radius: 14px !important;
     }
+
+    .register-primary-button {
+        box-shadow: 0 12px 26px rgba(47, 99, 240, 0.22);
+    }
+
+    .register-page .register-text-input input,
+    .register-page .register-password-input input,
+    .register-page .register-dropdown-input,
+    .register-page .register-dropdown-input .rz-dropdown-label {
+        border-radius: 14px !important;
+    }
+
+    .register-page .register-text-input input,
+    .register-page .register-password-input input,
+    .register-page .register-dropdown-input {
+        min-height: 48px;
+        border: 1px solid #d6deea !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease;
+    }
+
+        .register-page .register-text-input input:focus,
+        .register-page .register-password-input input:focus,
+        .register-page .register-dropdown-input:focus,
+        .register-page .register-text-input input:hover,
+        .register-page .register-password-input input:hover,
+        .register-page .register-dropdown-input:hover {
+            border-color: #7c94ff !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08) !important;
+        }
+
+    .register-page .rz-invalid,
+    .register-page .rz-state-invalid,
+    .register-page .rz-invalid input,
+    .register-page .rz-state-invalid input,
+    .register-page .rz-invalid .rz-dropdown-label,
+    .register-page .rz-state-invalid .rz-dropdown-label {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.10) !important;
+    }
+
+    .register-page .rz-messages-error,
+    .register-page .validation-message {
+        color: #dc2626;
+        font-size: 0.85rem;
+        margin-top: 0.2rem;
+    }
+  
 </style>
 
 @code {
-    private RegisterInputModel registerModel = new();
+    private RegisterInputModel registerModel = new()
+    {
+        AccountType = "Attendee"
+    };
+
     private string? SuccessMessage;
     private string? ErrorMessage;
+
+    private readonly IEnumerable<AccountTypeOption> accountTypes = new List<AccountTypeOption>
+    {
+        new() { Text = "Attendee", Value = "Attendee" },
+        new() { Text = "Event Manager", Value = "EventManager" }
+    };
 
     private async Task HandleRegister()
     {
@@ -165,13 +591,27 @@
         if (registerModel.AccountType == "Attendee")
         {
             await UserManager.AddToRoleAsync(user, "Attendee");
-            SuccessMessage = "Registration successful. Please log in.";
+            SuccessMessage = "Registration successful. Redirecting to login...";
             NavigationManager.NavigateTo("/login", forceLoad: true);
         }
         else
         {
             SuccessMessage = "Your Event Manager request was submitted and is waiting for admin approval.";
-            registerModel = new RegisterInputModel();
+            registerModel = new RegisterInputModel
+            {
+                AccountType = "Attendee"
+            };
         }
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private class AccountTypeOption
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
     }
 }

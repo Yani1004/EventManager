@@ -1,181 +1,533 @@
 ﻿@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Components.Authorization
+@using Radzen
+@using Radzen.Blazor
+@using Microsoft.JSInterop
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
-<div class="sidebar @(isCollapsed ? "collapsed" : "")">
-    <div class="top-row navbar navbar-dark px-3">
-        <div class="d-flex align-items-center justify-content-between w-100">
-            <a class="navbar-brand m-0" href="">
-                @(isCollapsed ? "EM" : "EventManager")
-            </a>
+<div class="app-sidebar @(isCollapsed ? "collapsed" : "")">
+    <RadzenCard class="sidebar-card">
+        <RadzenStack Orientation="Orientation.Vertical" Gap="0" class="sidebar-stack">
 
-            <button class="toggle-btn" @onclick="ToggleSidebar" type="button">
-                <span class="bi bi-list"></span>
-            </button>
-        </div>
-    </div>
+            @if (!isCollapsed)
+            {
+                <div class="sidebar-header">
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 AlignItems="AlignItems.Center"
+                                 JustifyContent="JustifyContent.SpaceBetween"
+                                 Gap="0.75rem"
+                                 class="w-100">
 
-    <div class="nav-scrollable">
-        <nav class="nav flex-column">
+                        <RadzenStack Orientation="Orientation.Horizontal"
+                                     AlignItems="AlignItems.Center"
+                                     Gap="0.9rem"
+                                     class="brand-row">
+                            <div class="brand-badge">
+                                <RadzenIcon Icon="event" class="brand-icon" />
+                            </div>
 
-            <!-- Public links -->
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill" aria-hidden="true"></span>
-                    @if (!isCollapsed)
-                    {
-                        <span class="nav-text">Home</span>
-                    }
-                </NavLink>
-            </div>
+                            <div class="brand-copy">
+                                <div class="brand-title">EventManager</div>
+                                <div class="brand-subtitle">Manage events beautifully</div>
+                            </div>
+                        </RadzenStack>
 
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="events">
-                    <span class="bi bi-calendar-event-fill" aria-hidden="true"></span>
-                    @if (!isCollapsed)
-                    {
-                        <span class="nav-text">Events</span>
-                    }
-                </NavLink>
-            </div>
-
-            <!-- Guest-only -->
-            <AuthorizeView>
-                <NotAuthorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="register">
-                            <span class="bi bi-person-plus-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Register</span>
-                            }
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="login">
-                            <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Login</span>
-                            }
-                        </NavLink>
-                    </div>
-                </NotAuthorized>
-            </AuthorizeView>
-
-            <!-- Attendee-only -->
-            <AuthorizeView Roles="Attendee">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="my-registrations">
-                            <span class="bi bi-journal-check" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">My Registrations</span>
-                            }
-                        </NavLink>
-                    </div>
-                </Authorized>
-            </AuthorizeView>
-
-            <!-- EventManager-only -->
-            <AuthorizeView Roles="EventManager">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="events/create">
-                            <span class="bi bi-plus-circle" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Create Event</span>
-                            }
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="my-events">
-                            <span class="bi bi-folder2-open" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">My Events</span>
-                            }
-                        </NavLink>
-                    </div>
-                </Authorized>
-            </AuthorizeView>
-
-            <!-- Admin-only -->
-            <AuthorizeView Roles="Admin">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin">
-                            <span class="bi bi-shield-lock-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Admin Panel</span>
-                            }
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/approvals">
-                            <span class="bi bi-person-check-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Approvals</span>
-                            }
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/users">
-                            <span class="bi bi-people-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Users</span>
-                            }
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/events">
-                            <span class="bi bi-calendar2-check-fill" aria-hidden="true"></span>
-                            @if (!isCollapsed)
-                            {
-                                <span class="nav-text">Manage Events</span>
-                            }
-                        </NavLink>
-                    </div>
-                </Authorized>
-            </AuthorizeView>
-        </nav>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="logout-container px-3">
-                    <button type="button" class="nav-link logout-link logout-button" @onclick="Logout">
-                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span>
-                        @if (!isCollapsed)
-                        {
-                            <span class="nav-text">Logout</span>
-                        }
-                    </button>
+                        <RadzenButton Icon="menu"
+                                      Variant="Variant.Flat"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Size="ButtonSize.Medium"
+                                      Click="@ToggleSidebar"
+                                      class="sidebar-toggle" />
+                    </RadzenStack>
                 </div>
-            </Authorized>
-        </AuthorizeView>
-    </div>
+
+                <RadzenDivider class="menu-divider" />
+            }
+            else
+            {
+                <div class="sidebar-header-collapsed">
+                    <div class="collapsed-inner">
+                        <RadzenButton Icon="menu"
+                                      Variant="Variant.Flat"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Size="ButtonSize.Medium"
+                                      Click="@ToggleSidebar"
+                                      class="sidebar-toggle collapsed-toggle" />
+                    </div>
+                </div>
+            }
+
+            <div class="sidebar-nav @(isCollapsed ? "sidebar-nav-collapsed" : "")">
+                @if (!isCollapsed)
+                {
+                    <RadzenPanelMenu ShowArrow="false" Multiple="true" class="menu-full">
+
+                        @if (!isAdmin)
+                        {
+                            <RadzenPanelMenuItem Text="Home" Icon="home" Path="" Match="NavLinkMatch.All" />
+                            <RadzenPanelMenuItem Text="Events" Icon="calendar_month" Path="events" Match="NavLinkMatch.All" />
+                        }
+
+                        <AuthorizeView>
+                            <NotAuthorized>
+                                <RadzenPanelMenuItem Text="Register" Icon="person_add" Path="register" Match="NavLinkMatch.All" />
+                            </NotAuthorized>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Attendee">
+                            <Authorized>
+                                <RadzenPanelMenuItem Text="My Registrations" Icon="fact_check" Path="my-registrations" Match="NavLinkMatch.All" />
+                            </Authorized>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="EventManager">
+                            <Authorized>
+                                <RadzenPanelMenuItem Text="Create Event" Icon="add_circle" Path="events/create" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="My Events" Icon="folder_open" Path="my-events" Match="NavLinkMatch.All" />
+                            </Authorized>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Admin">
+                            <Authorized>
+                                <RadzenPanelMenuItem Text="Admin Panel" Icon="admin_panel_settings" Path="admin" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Approvals" Icon="how_to_reg" Path="admin/approvals" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Users" Icon="groups" Path="admin/users" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Manage Events" Icon="event_available" Path="admin/events" Match="NavLinkMatch.All" />
+                            </Authorized>
+                        </AuthorizeView>
+                    </RadzenPanelMenu>
+                }
+                else
+                {
+                    <div class="collapsed-inner">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0.85rem" class="menu-collapsed">
+
+                            @if (!isAdmin)
+                            {
+                                <RadzenButton Icon="home"
+                                              Variant="Variant.Flat"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              class="collapsed-nav-btn"
+                                              Click='@(() => NavigateTo(""))' />
+
+                                <RadzenButton Icon="calendar_month"
+                                              Variant="Variant.Flat"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              class="collapsed-nav-btn"
+                                              Click='@(() => NavigateTo("events"))' />
+                            }
+
+                            <AuthorizeView>
+                                <NotAuthorized>
+                                    <RadzenButton Icon="person_add"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("register"))' />
+                                </NotAuthorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="Attendee">
+                                <Authorized>
+                                    <RadzenButton Icon="fact_check"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("my-registrations"))' />
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="EventManager">
+                                <Authorized>
+                                    <RadzenButton Icon="add_circle"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("events/create"))' />
+
+                                    <RadzenButton Icon="folder_open"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("my-events"))' />
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="Admin">
+                                <Authorized>
+                                    <RadzenButton Icon="admin_panel_settings"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("admin"))' />
+
+                                    <RadzenButton Icon="how_to_reg"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("admin/approvals"))' />
+
+                                    <RadzenButton Icon="groups"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("admin/users"))' />
+
+                                    <RadzenButton Icon="event_available"
+                                                  Variant="Variant.Flat"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  class="collapsed-nav-btn"
+                                                  Click='@(() => NavigateTo("admin/events"))' />
+                                </Authorized>
+                            </AuthorizeView>
+                        </RadzenStack>
+                    </div>
+                }
+            </div>
+
+            <div class="sidebar-fill"></div>
+
+            <AuthorizeView>
+                <Authorized>
+                    @if (!isCollapsed)
+                    {
+                        <RadzenDivider class="menu-divider" />
+
+                        <div class="profile-block" @onclick='@(() => NavigateTo("profile"))'>
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.85rem">
+
+                                <div class="profile-avatar">
+                                    <RadzenIcon Icon="account_circle" class="profile-avatar-icon" />
+                                </div>
+
+                                <div class="profile-copy">
+                                    <div class="profile-name">@displayName</div>
+
+                                    <div class="profile-role">
+                                        <span>@userRole</span>
+                                    </div>
+                                </div>
+                            </RadzenStack>
+                        </div>
+                    }
+                </Authorized>
+            </AuthorizeView>
+
+        </RadzenStack>
+    </RadzenCard>
 </div>
+
+<style>
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 320px;
+        min-width: 320px;
+        height: 100vh;
+        padding: 1rem;
+        background: #f5f7fb;
+        transition: width 0.25s ease, min-width 0.25s ease;
+        z-index: 1000;
+        box-sizing: border-box;
+    }
+
+    .app-sidebar.collapsed {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    .sidebar-card {
+        height: calc(100vh - 2rem);
+        border-radius: 30px;
+        border: 1px solid #e8edf5;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .sidebar-stack {
+        height: 100%;
+    }
+
+    .sidebar-header {
+        padding: 1.2rem 1.1rem 1rem 1.1rem;
+    }
+
+    .sidebar-header-collapsed {
+        padding: 1.15rem 0 0.55rem 0;
+    }
+
+    .collapsed-inner {
+        width: 56px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .brand-row {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .brand-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #5b6df9 0%, #6f86ff 100%);
+        box-shadow: 0 10px 24px rgba(91, 109, 249, 0.28);
+        flex-shrink: 0;
+    }
+
+    .brand-icon {
+        color: white;
+        font-size: 24px;
+    }
+
+    .brand-copy {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .brand-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1.1;
+        color: #122033;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .brand-subtitle {
+        margin-top: 0.2rem;
+        font-size: 0.82rem;
+        color: #64748b;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sidebar-toggle {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px !important;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .collapsed-toggle {
+        margin: 0;
+    }
+
+    .menu-divider {
+        margin: 0 !important;
+    }
+
+    .sidebar-nav {
+        padding: 1rem 0.8rem;
+    }
+
+    .sidebar-nav-collapsed {
+        padding: 0.35rem 0 1rem 0;
+    }
+
+    .menu-full {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    .menu-full .rz-navigation-item-wrapper {
+        margin-bottom: 0.45rem;
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .menu-full .rz-navigation-item-link {
+        min-height: 54px;
+        border-radius: 18px;
+        color: #24364a;
+        font-weight: 600;
+        font-size: 1rem;
+        padding-left: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .menu-full .rz-navigation-item-link:hover {
+        background: #edf2ff;
+        color: #3158f5;
+    }
+
+    .menu-full .rz-state-active > .rz-navigation-item-link,
+    .menu-full .rz-navigation-item-link.rz-state-active {
+        background: linear-gradient(90deg, #eceeff 0%, #e8edff 100%);
+        color: #4254d8;
+    }
+
+    .menu-collapsed {
+        align-items: center;
+        padding-top: 0;
+        width: 56px;
+    }
+
+    .collapsed-nav-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+    }
+
+    .sidebar-fill {
+        flex: 1;
+    }
+
+    .profile-block {
+        padding: 1rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .profile-block:hover {
+        background: rgba(91, 109, 249, 0.06);
+    }
+
+    .profile-avatar {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #7c66ff 0%, #5b6df9 100%);
+        color: white;
+        flex-shrink: 0;
+        border-radius: 14px;
+        box-shadow: 0 8px 18px rgba(91, 109, 249, 0.25);
+    }
+
+    .profile-avatar-icon {
+        color: white;
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    .profile-copy {
+        min-width: 0;
+    }
+
+    .profile-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #162334;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.35rem;
+    }
+
+    .profile-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        background: #eef2ff;
+        color: #4254d8;
+        width: fit-content;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+</style>
 
 @code {
     private bool isCollapsed = false;
+    private bool initialized = false;
+    private string displayName = "";
+    private string userRole = "";
+    private bool isAdmin = false;
 
-    private void ToggleSidebar()
+    private async Task ToggleSidebar()
     {
         isCollapsed = !isCollapsed;
+        await SaveAndApplySidebarState();
     }
 
-    private void Logout()
+    protected override async Task OnInitializedAsync()
     {
-        NavigationManager.NavigateTo("/account/logout", forceLoad: true);
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            displayName = user.Identity.Name ?? "User";
+            isAdmin = user.IsInRole("Admin");
+
+            if (user.IsInRole("Admin"))
+                userRole = "Admin";
+            else if (user.IsInRole("EventManager"))
+                userRole = "EventManager";
+            else if (user.IsInRole("Attendee"))
+                userRole = "Attendee";
+            else
+                userRole = "User";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !initialized)
+        {
+            initialized = true;
+            isCollapsed = await JS.InvokeAsync<bool>("sidebarState.get");
+            await ApplySidebarState();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAndApplySidebarState()
+    {
+        await JS.InvokeVoidAsync("sidebarState.set", isCollapsed);
+        await ApplySidebarState();
+    }
+
+    private async Task ApplySidebarState()
+    {
+        await JS.InvokeVoidAsync("sidebarState.applyBodyClass", isCollapsed);
+    }
+
+    private void NavigateTo(string url)
+    {
+        NavigationManager.NavigateTo(url);
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "U";
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length == 1)
+            return parts[0][0].ToString().ToUpper();
+
+        return $"{char.ToUpper(parts[0][0])}{char.ToUpper(parts[1][0])}";
     }
 }

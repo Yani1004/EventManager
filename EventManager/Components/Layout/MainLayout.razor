@@ -1,54 +1,234 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using Radzen
+@using Radzen.Blazor
 
-@inject AuthenticationStateProvider AuthenticationStateProvider
-
-<div class="page">
+<div class="main-layout-shell">
     <NavMenu />
 
-    <main>
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <a href="/profile" class="profile-link">
-                        <span class="bi bi-person-circle profile-icon"></span>
-                        <span>@displayName (@userRole)</span>
-                    </a>
-                </Authorized>
+    <div class="layout-main">
+        <RadzenCard class="layout-topbar">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.SpaceBetween"
+                         class="w-100">
 
-                <NotAuthorized>
-                    <div></div>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.9rem"
+                             class="topbar-left">
+                    <div class="topbar-badge">
+                        <RadzenIcon Icon="event" class="topbar-badge-icon" />
+                    </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+                    <div class="topbar-brand">
+                        <div class="topbar-title">Event Management System</div>
+                        <div class="topbar-subtitle">Manage events, users and registrations</div>
+                    </div>
+                </RadzenStack>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/account/logout" data-enhance-nav="false" class="topbar-link">
+                            <RadzenIcon Icon="logout" class="topbar-link-icon" />
+                            <span>Logout</span>
+                        </a>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <a href="/login" class="topbar-link">
+                            <RadzenIcon Icon="login" class="topbar-link-icon" />
+                            <span>Login</span>
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="layout-content-card">
+            <div class="layout-content">
+                @Body
+            </div>
+        </RadzenCard>
+    </div>
 </div>
 
-@code {
-    private string displayName = "";
-    private string userRole = "";
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+    }
 
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+    .main-layout-shell {
+        height: 100vh;
+        background: linear-gradient(180deg, #f5f7fc 0%, #edf2fb 100%);
+        overflow: hidden;
+    }
 
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            displayName = user.Identity.Name ?? "User";
+    .layout-main {
+        margin-left: 320px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem 1rem 1rem 0;
+        box-sizing: border-box;
+        transition: margin-left 0.25s ease;
+        overflow: hidden;
+    }
 
-            if (user.IsInRole("Admin"))
-                userRole = "Admin";
-            else if (user.IsInRole("EventManager"))
-                userRole = "EventManager";
-            else if (user.IsInRole("Attendee"))
-                userRole = "Attendee";
-            else
-                userRole = "User";
+    body.sidebar-collapsed .layout-main {
+        margin-left: 120px;
+    }
+
+    .layout-topbar {
+        flex-shrink: 0;
+        border: none;
+        border-radius: 24px;
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
+        box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18);
+        overflow: hidden;
+    }
+
+    .topbar-left {
+        min-width: 0;
+    }
+
+    .topbar-badge {
+        width: 50px;
+        height: 50px;
+        min-width: 50px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .topbar-badge-icon {
+        color: #ffffff;
+        font-size: 1.45rem;
+    }
+
+    .topbar-brand {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .topbar-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-subtitle {
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 0.88rem;
+        margin-top: 0.15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-link {
+        text-decoration: none;
+        color: white;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 14px;
+        padding: 0.72rem 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+        .topbar-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.22);
+            transform: translateY(-1px);
+        }
+
+    .topbar-link-icon {
+        font-size: 1.05rem;
+    }
+
+    .layout-content-card {
+        flex: 1;
+        min-height: 0;
+        border: none;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
+
+    .layout-content {
+        height: 100%;
+        overflow-y: auto;
+        padding: 2rem;
+        box-sizing: border-box;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    #blazor-error-ui {
+        color-scheme: light only;
+        background: lightyellow;
+        bottom: 0;
+        box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+        box-sizing: border-box;
+        display: none;
+        left: 0;
+        padding: 0.6rem 1.25rem;
+        position: fixed;
+        width: 100%;
+        z-index: 2000;
+    }
+
+        #blazor-error-ui .dismiss {
+            cursor: pointer;
+            position: absolute;
+            right: 0.75rem;
+            top: 0.5rem;
+        }
+
+    @@media (max-width: 992px) {
+        .layout-main {
+            padding: 0.75rem 0.75rem 0.75rem 0;
+        }
+
+        .layout-content {
+            padding: 1.25rem;
+        }
+
+        .topbar-title {
+            font-size: 1rem;
+        }
+
+        .topbar-subtitle {
+            font-size: 0.8rem;
+        }
+
+        .topbar-badge {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
         }
     }
-}
+
+   
+</style>

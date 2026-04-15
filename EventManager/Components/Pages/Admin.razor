@@ -6,213 +6,631 @@
 @using EventManager.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole> RoleManager
 @inject ApplicationDbContext Db
+@inject NavigationManager NavigationManager
 
 <PageTitle>Admin Dashboard</PageTitle>
 
-<div class="container py-4 admin-dashboard">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-        <div>
-            <h1 class="fw-bold mb-1">Admin Dashboard</h1>
-            <p class="text-muted mb-0">Manage users, approvals, and platform activity.</p>
-        </div>
-
-        <div class="mt-3 mt-md-0 d-flex gap-2 flex-wrap">
-            <a href="/admin/approvals" class="btn btn-primary">
-                <i class="bi bi-person-check me-2"></i>Approvals
-            </a>
-            <a href="/admin/events" class="btn btn-outline-secondary">
-                <i class="bi bi-calendar-event me-2"></i>Manage Events
-            </a>
-        </div>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <span>Loading dashboard data...</span>
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="row g-4 mb-4">
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 stat-card h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-primary-subtle text-primary">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <h6 class="text-muted mt-3 mb-1">Total Users</h6>
-                        <h2 class="fw-bold mb-0">@totalUsers</h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 stat-card h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-success-subtle text-success">
-                            <i class="bi bi-person-badge-fill"></i>
-                        </div>
-                        <h6 class="text-muted mt-3 mb-1">Event Managers</h6>
-                        <h2 class="fw-bold mb-0">@totalEventManagers</h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 stat-card h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-warning-subtle text-warning">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                        <h6 class="text-muted mt-3 mb-1">Pending Requests</h6>
-                        <h2 class="fw-bold mb-0">@pendingApprovals</h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 stat-card h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-info-subtle text-info">
-                            <i class="bi bi-calendar2-event-fill"></i>
-                        </div>
-                        <h6 class="text-muted mt-3 mb-1">Total Events</h6>
-                        <h2 class="fw-bold mb-0">@totalEvents</h2>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-12 col-xl-7">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
-                        <h4 class="fw-semibold mb-1">Pending Event Manager Requests</h4>
-                        <p class="text-muted mb-0">Latest users waiting for admin approval.</p>
-                    </div>
-                    <div class="card-body p-4">
-                        @if (recentPendingUsers.Count == 0)
-                        {
-                            <div class="alert alert-info mb-0">
-                                There are currently no pending requests.
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="table-responsive">
-                                <table class="table align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Requested Role</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var user in recentPendingUsers)
-                                        {
-                                            <tr>
-                                                <td>@user.FirstName @user.LastName</td>
-                                                <td>@user.Email</td>
-                                                <td>@user.RequestedRole</td>
-                                                <td>
-                                                    <span class="badge bg-warning text-dark">Pending</span>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="mt-3">
-                                <a href="/admin/approvals" class="btn btn-sm btn-outline-primary">
-                                    Go to approvals
-                                </a>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-xl-5">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
-                        <h4 class="fw-semibold mb-1">Quick Actions</h4>
-                        <p class="text-muted mb-0">Common admin tasks.</p>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="d-grid gap-3">
-
-                            <a href="/admin/approvals" class="btn btn-outline-primary btn-lg text-start">
-                                <i class="bi bi-person-check me-2"></i>
-                                Review manager approvals
-                            </a>
-
-                            <a href="/admin/users" class="btn btn-outline-secondary btn-lg text-start">
-                                <i class="bi bi-people me-2"></i>
-                                View all users
-                            </a>
-
-                            <a href="/admin/events" class="btn btn-outline-secondary btn-lg text-start">
-                                <i class="bi bi-calendar3 me-2"></i>
-                                Manage all events
-                            </a>
-
-                        </div>
-
-                        <hr class="my-4" />
-
-                        <div class="small text-muted">
-                            <div class="mb-2">
-                                <strong>Admin email:</strong> admin@eventmanager.com
-                            </div>
-                            <div>
-                                This page is visible only to users in the <strong>Admin</strong> role.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
 <style>
-    .admin-dashboard .stat-card {
-        border-radius: 1rem;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    .admin-page {
+        padding: 1.5rem;
     }
 
-        .admin-dashboard .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.08);
+    .admin-shell {
+        max-width: 1450px;
+        margin: 0 auto;
+    }
+
+    .hero-card,
+    .stat-card,
+    .section-card,
+    .action-card,
+    .loading-card {
+        border: none !important;
+        border-radius: 28px !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06), 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    .hero-card {
+        position: relative;
+        overflow: hidden;
+        padding: 0.5rem;
+        background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.16), transparent 34%), linear-gradient(135deg, #ffffff 0%, #f8fbff 50%, #f6f8ff 100%) !important;
+    }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.08);
+            top: -90px;
+            right: -70px;
+            filter: blur(8px);
         }
 
-    .admin-dashboard .stat-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
+    .hero-icon-wrap {
+        width: 74px;
+        height: 74px;
+        min-width: 74px;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        box-shadow: 0 14px 30px rgba(59, 130, 246, 0.28);
+    }
+
+        .hero-icon-wrap .rzi {
+            font-size: 2rem;
+            color: white;
+        }
+
+    .hero-title {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.05;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+    }
+
+    .hero-subtitle {
+        margin: 0.5rem 0 0 0;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #64748b;
+        max-width: 720px;
+    }
+
+    .hero-chip {
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        width: fit-content;
+    }
+
+        .hero-chip .rzi {
+            font-size: 1rem;
+        }
+
+    .stat-card {
+        height: 100%;
+        /* padding: 0.35rem; */
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        overflow: hidden;
+        position: relative;
+    }
+
+        .stat-card:hover,
+        .section-card:hover,
+        .action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.09), 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+        }
+
+        .stat-card::after {
+            content: "";
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            right: -35px;
+            top: -35px;
+            opacity: 0.18;
+        }
+
+        .stat-card.users::after {
+            background: #3b82f6;
+        }
+
+        .stat-card.managers::after {
+            background: #10b981;
+        }
+
+        .stat-card.pending::after {
+            background: #f59e0b;
+        }
+
+        .stat-card.events::after {
+            background: #8b5cf6;
+        }
+
+    .stat-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    }
+
+        .stat-icon .rzi {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .stat-icon.users {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .stat-icon.managers {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .stat-icon.pending {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .stat-icon.events {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+    .stat-label {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.92rem;
+        font-weight: 500;
+    }
+
+    .stat-value {
+        margin: 0.35rem 0 0 0;
+        font-size: 2.1rem;
+        font-weight: 800;
+        line-height: 1;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+    }
+
+    .stat-foot {
+        margin-top: 0.6rem;
+        color: #94a3b8;
+        font-size: 0.84rem;
+    }
+
+    .section-card {
+        /* padding: 0.35rem; */
+        height: 100%;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 750;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+        margin: 0.35rem 0 0 0;
+        color: #64748b;
+        font-size: 0.94rem;
+        line-height: 1.55;
+    }
+
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, rgba(148,163,184,0.22), rgba(148,163,184,0.04));
+        border-radius: 999px;
+        margin: 0.2rem 0 0.4rem 0;
+    }
+
+    .pending-person {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .pending-name {
+        font-size: 0.96rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .pending-email {
+        font-size: 0.88rem;
+        color: #64748b;
+    }
+
+    .role-pill {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, 0.1);
+        color: #4f46e5;
+        font-size: 0.82rem;
+        font-weight: 700;
+        width: fit-content;
     }
 
-    .admin-dashboard .card {
-        border-radius: 1rem;
+    .action-card {
+        cursor: pointer;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .action-icon {
+        width: 54px;
+        height: 54px;
+        min-width: 54px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(59,130,246,0.16), rgba(99,102,241,0.16));
+    }
+
+        .action-icon .rzi {
+            font-size: 1.35rem;
+            color: #3b82f6;
+        }
+
+    .action-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .action-text {
+        margin: 0.25rem 0 0 0;
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .info-box {
+        border-radius: 22px;
+        background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+        padding: 1rem 1.1rem;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .info-label {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.85rem;
+    }
+
+    .info-value {
+        margin: 0.3rem 0 0 0;
+        color: #0f172a;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    .empty-state {
+        border-radius: 22px;
+        padding: 1.4rem;
+        background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+    }
+
+    .loading-wrap {
+        min-height: 260px;
+    }
+
+    .rz-datatable-data td {
+        vertical-align: middle;
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    .rz-datatable-thead th {
+        font-size: 0.86rem;
+        color: #64748b;
+        font-weight: 700;
+        background: transparent !important;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.85rem !important;
+    }
+
+    .rz-datatable-data tr {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+    }
+
+    .rz-button {
+        border-radius: 14px !important;
+        font-weight: 600 !important;
     }
 </style>
+
+<div class="admin-page">
+    <div class="admin-shell">
+        <RadzenStack Gap="1.4rem">
+
+            <RadzenCard class="hero-card">
+                <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+                    <RadzenColumn Size="12" SizeLG="8">
+                        <RadzenStack Gap="1rem">
+                            <div class="hero-chip">
+                                <RadzenIcon Icon="workspace_premium" />
+                                Administrative Control Center
+                            </div>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                                <div class="hero-icon-wrap">
+                                    <RadzenIcon Icon="shield" />
+                                </div>
+
+                                <RadzenStack Gap="0.2rem">
+                                    <h1 class="hero-title">Admin Dashboard</h1>
+                                    <p class="hero-subtitle">
+                                        Oversee platform activity, review manager requests, monitor users, and keep your event management system organized and secure.
+                                    </p>
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeLG="4">
+                        <RadzenStack Gap="0.75rem" AlignItems="AlignItems.Stretch">
+                            <RadzenButton Text="Review Approvals"
+                                          Icon="how_to_reg"
+                                          ButtonStyle="ButtonStyle.Primary"
+                                          Size="ButtonSize.Large"
+                                          Click="@(() => NavigationManager.NavigateTo("/admin/approvals"))" />
+
+                            <RadzenButton Text="Manage Events"
+                                          Icon="event_note"
+                                          Variant="Variant.Outlined"
+                                          ButtonStyle="ButtonStyle.Primary"
+                                          Size="ButtonSize.Large"
+                                          Click="@(() => NavigationManager.NavigateTo("/admin/events"))" />
+                        </RadzenStack>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+
+            @if (isLoading)
+            {
+                <RadzenCard class="loading-card">
+                    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="1rem" class="loading-wrap">
+                        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+                        <RadzenText TextStyle="TextStyle.Body1">Loading dashboard data...</RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            }
+            else
+            {
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeSM="6" SizeXL="3">
+                        <RadzenCard class="stat-card users">
+                            <RadzenStack Gap="1rem">
+                                <div class="stat-icon users">
+                                    <RadzenIcon Icon="groups" />
+                                </div>
+
+                                <RadzenStack Gap="0.1rem">
+                                    <p class="stat-label">Total Users</p>
+                                    <p class="stat-value">@totalUsers</p>
+                                </RadzenStack>
+
+                                <div class="stat-foot">All registered platform accounts</div>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeSM="6" SizeXL="3">
+                        <RadzenCard class="stat-card managers">
+                            <RadzenStack Gap="1rem">
+                                <div class="stat-icon managers">
+                                    <RadzenIcon Icon="badge" />
+                                </div>
+
+                                <RadzenStack Gap="0.1rem">
+                                    <p class="stat-label">Event Managers</p>
+                                    <p class="stat-value">@totalEventManagers</p>
+                                </RadzenStack>
+
+                                <div class="stat-foot">Approved managers with access</div>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeSM="6" SizeXL="3">
+                        <RadzenCard class="stat-card pending">
+                            <RadzenStack Gap="1rem">
+                                <div class="stat-icon pending">
+                                    <RadzenIcon Icon="pending_actions" />
+                                </div>
+
+                                <RadzenStack Gap="0.1rem">
+                                    <p class="stat-label">Pending Requests</p>
+                                    <p class="stat-value">@pendingApprovals</p>
+                                </RadzenStack>
+
+                                <div class="stat-foot">Users waiting for admin approval</div>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeSM="6" SizeXL="3">
+                        <RadzenCard class="stat-card events">
+                            <RadzenStack Gap="1rem">
+                                <div class="stat-icon events">
+                                    <RadzenIcon Icon="calendar_month" />
+                                </div>
+
+                                <RadzenStack Gap="0.1rem">
+                                    <p class="stat-label">Total Events</p>
+                                    <p class="stat-value">@totalEvents</p>
+                                </RadzenStack>
+
+                                <div class="stat-foot">Published events across the system</div>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeXL="8">
+                        <RadzenCard class="section-card">
+                            <RadzenStack Gap="1rem">
+                                <RadzenStack Gap="0.25rem">
+                                    <h3 class="section-title">Pending Event Manager Requests</h3>
+                                    <p class="section-subtitle">
+                                        Review the latest users who requested elevated access and need approval before managing events.
+                                    </p>
+                                </RadzenStack>
+
+                                <div class="section-divider"></div>
+
+                                @if (recentPendingUsers.Count == 0)
+                                {
+                                    <div class="empty-state">
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.8rem">
+                                            <RadzenIcon Icon="check_circle" Style="font-size: 1.6rem; color: #10b981;" />
+                                            <RadzenText TextStyle="TextStyle.Body1">
+                                                There are currently no pending requests.
+                                            </RadzenText>
+                                        </RadzenStack>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <RadzenDataGrid Data="@recentPendingUsers"
+                                                    TItem="ApplicationUser"
+                                                    AllowPaging="false"
+                                                    AllowSorting="false"
+                                                    AllowFiltering="false"
+                                                    Responsive="true"
+                                                    GridLines="DataGridGridLines.None"
+                                                    Density="Density.Default">
+                                        <Columns>
+                                            <RadzenDataGridColumn TItem="ApplicationUser" Title="User">
+                                                <Template Context="user">
+                                                    <div class="pending-person">
+                                                        <span class="pending-name">@user.FirstName @user.LastName</span>
+                                                        <span class="pending-email">@user.Email</span>
+                                                    </div>
+                                                </Template>
+                                            </RadzenDataGridColumn>
+
+                                            <RadzenDataGridColumn TItem="ApplicationUser" Title="Requested Role">
+                                                <Template Context="user">
+                                                    <span class="role-pill">@user.RequestedRole</span>
+                                                </Template>
+                                            </RadzenDataGridColumn>
+
+                                            <RadzenDataGridColumn TItem="ApplicationUser" Title="Status" Width="150px">
+                                                <Template Context="user">
+                                                    <RadzenBadge Text="Pending"
+                                                                 BadgeStyle="BadgeStyle.Warning"
+                                                                 Shade="Shade.Light"
+                                                                 Variant="Variant.Flat" />
+                                                </Template>
+                                            </RadzenDataGridColumn>
+                                        </Columns>
+                                    </RadzenDataGrid>
+
+                                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="mt-2">
+                                        <RadzenButton Text="Open Approvals"
+                                                      Icon="arrow_forward"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      Variant="Variant.Outlined"
+                                                      Click="@(() => NavigationManager.NavigateTo("/admin/approvals"))" />
+                                    </RadzenStack>
+                                }
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeXL="4">
+                        <RadzenStack Gap="1rem">
+
+                            <RadzenCard class="section-card">
+                                <RadzenStack Gap="1rem">
+                                    <RadzenStack Gap="0.25rem">
+                                        <h3 class="section-title">Quick Actions</h3>
+                                        <p class="section-subtitle">
+                                            Jump directly into the most common administrative workflows.
+                                        </p>
+                                    </RadzenStack>
+
+                                    <div class="section-divider"></div>
+
+                                    <RadzenCard class="action-card" @onclick='() => NavigationManager.NavigateTo("/admin/approvals")'>
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                                            <div class="action-icon">
+                                                <RadzenIcon Icon="person_add_alt_1" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <p class="action-title">Review approvals</p>
+                                                <p class="action-text">Approve or reject Event Manager access requests.</p>
+                                            </RadzenStack>
+                                        </RadzenStack>
+                                    </RadzenCard>
+
+                                    <RadzenCard class="action-card" @onclick='() => NavigationManager.NavigateTo("/admin/users")'>
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                                            <div class="action-icon">
+                                                <RadzenIcon Icon="group" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <p class="action-title">View all users</p>
+                                                <p class="action-text">Inspect users, roles, and overall access.</p>
+                                            </RadzenStack>
+                                        </RadzenStack>
+                                    </RadzenCard>
+
+                                    <RadzenCard class="action-card" @onclick='() => NavigationManager.NavigateTo("/admin/events")'>
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                                            <div class="action-icon">
+                                                <RadzenIcon Icon="event_available" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <p class="action-title">Manage events</p>
+                                                <p class="action-text">Review and maintain event activity platform-wide.</p>
+                                            </RadzenStack>
+                                        </RadzenStack>
+                                    </RadzenCard>
+                                </RadzenStack>
+                            </RadzenCard>
+
+                            <RadzenCard class="section-card">
+                                <RadzenStack Gap="1rem">
+                                    <h3 class="section-title">Admin Info</h3>
+
+                                    <div class="info-box">
+                                        <p class="info-label">Admin email</p>
+                                        <p class="info-value">admin@eventmanager.com</p>
+                                    </div>
+
+                                    <div class="info-box">
+                                        <p class="info-label">Access level</p>
+                                        <p class="info-value">
+                                            This dashboard is visible only to authenticated users in the Admin role.
+                                        </p>
+                                    </div>
+                                </RadzenStack>
+                            </RadzenCard>
+
+                        </RadzenStack>
+                    </RadzenColumn>
+                </RadzenRow>
+            }
+        </RadzenStack>
+    </div>
+</div>
 
 @code {
     private bool isLoading = true;
