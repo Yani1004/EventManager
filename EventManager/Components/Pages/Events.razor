@@ -3,328 +3,621 @@
 
 @using EventManager.Data
 @using EventManager.Models
+@using Radzen
+@using Radzen.Blazor
+
 @inject ApplicationDbContext Db
+@inject NavigationManager NavigationManager
 
 <PageTitle>Events</PageTitle>
 
-<div class="container py-4">
-    <div class="events-header mb-4">
-        <div>
-            <h1 class="mb-1">Upcoming Events</h1>
-            <p class="text-muted mb-0">Browse events and refine the list with sorting and filters.</p>
-        </div>
+<div class="events-page">
+    <RadzenStack Gap="1.5rem" class="page-stack">
 
-        <div class="events-toolbar">
-            <div class="sort-box">
-                <label class="form-label mb-1">Sort By</label>
-                <InputSelect class="form-select" @bind-Value="selectedSort">
-                    <option value="date_asc">Date: Soonest First</option>
-                    <option value="date_desc">Date: Latest First</option>
-                    <option value="price_asc">Price: Low to High</option>
-                    <option value="price_desc">Price: High to Low</option>
-                </InputSelect>
-            </div>
+        <RadzenCard class="page-header-card">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Center"
+                         Wrap="FlexWrap.Wrap"
+                         Gap="1rem">
+                <RadzenStack Gap="0.35rem">
+                    <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="page-title">
+                        Upcoming Events
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="page-subtitle">
+                        Browse events and refine the list with sorting and filters.
+                    </RadzenText>
+                </RadzenStack>
 
-            <button class="btn btn-dark filters-toggle-btn" @onclick="ToggleFilters">
-                <span class="bi bi-funnel me-2"></span>
-                @(showFilters ? "Hide Filters" : "Filters")
-            </button>
-        </div>
-    </div>
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.End"
+                             Wrap="FlexWrap.Wrap"
+                             Gap="0.75rem"
+                             class="header-actions">
+                    <RadzenStack Gap="0.35rem" class="sort-box">
+                        <RadzenText TextStyle="TextStyle.Body2" class="field-label">Sort By</RadzenText>
+                        <RadzenDropDown @bind-Value="selectedSort"
+                                        Data="@sortOptions"
+                                        TextProperty="Text"
+                                        ValueProperty="Value"
+                                        Style="width: 100%;"
+                                        class="radzen-input" />
+                    </RadzenStack>
 
-    @if (showFilters)
-    {
-        <div class="card shadow-sm border-0 filters-panel mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h5 class="mb-0">Filter Events</h5>
+                    <RadzenButton Text="@(showFilters ? "Hide Filters" : "Filters")"
+                                  Icon="filter_alt"
+                                  Size="ButtonSize.Large"
+                                  Variant="Variant.Outlined"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  class="filters-toggle-button"
+                                  Click="@ToggleFilters" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
 
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">
-                        Clear All
-                    </button>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Category</label>
-                        <InputSelect class="form-select" @bind-Value="selectedCategory">
-                            <option value="">All Categories</option>
-                            @foreach (var category in categories)
-                            {
-                                <option value="@category">@category</option>
-                            }
-                        </InputSelect>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">City / Location</label>
-                        <InputText class="form-control" @bind-Value="locationFilter" />
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Min Price</label>
-                        <InputNumber class="form-control" @bind-Value="minPrice" />
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Max Price</label>
-                        <InputNumber class="form-control" @bind-Value="maxPrice" />
-                    </div>
-                </div>
-
-                <div class="filters-bottom-row mt-4">
-                    <div class="form-check form-switch free-only-switch">
-                        <InputCheckbox class="form-check-input" id="freeOnlySwitch" @bind-Value="freeOnly" />
-                        <label class="form-check-label ms-2" for="freeOnlySwitch">
-                            Free events only
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (HasActiveFilters)
-    {
-        <div class="active-filters mb-4">
-            @if (!string.IsNullOrWhiteSpace(selectedCategory))
-            {
-                <span class="filter-chip">
-                    Category: @selectedCategory
-                    <button type="button" @onclick="ClearCategory">×</button>
-                </span>
-            }
-
-            @if (!string.IsNullOrWhiteSpace(locationFilter))
-            {
-                <span class="filter-chip">
-                    Location: @locationFilter
-                    <button type="button" @onclick="ClearLocation">×</button>
-                </span>
-            }
-
-            @if (minPrice.HasValue)
-            {
-                <span class="filter-chip">
-                    Min: @minPrice.Value.ToString("F2") lv.
-                    <button type="button" @onclick="ClearMinPrice">×</button>
-                </span>
-            }
-
-            @if (maxPrice.HasValue)
-            {
-                <span class="filter-chip">
-                    Max: @maxPrice.Value.ToString("F2") lv.
-                    <button type="button" @onclick="ClearMaxPrice">×</button>
-                </span>
-            }
-
-            @if (freeOnly)
-            {
-                <span class="filter-chip">
-                    Free only
-                    <button type="button" @onclick="ClearFreeOnly">×</button>
-                </span>
-            }
-        </div>
-    }
-
-    @if (events == null)
-    {
-        <p>Loading events...</p>
-    }
-    else
-    {
-        <div class="results-bar mb-4">
-            <span class="results-count">@filteredAndSortedEvents.Count() event(s) found</span>
-        </div>
-
-        @if (!filteredAndSortedEvents.Any())
+        @if (showFilters)
         {
-            <div class="empty-state shadow-sm">
-                <div class="empty-icon mb-3">
-                    <span class="bi bi-search"></span>
-                </div>
-                <h4 class="mb-2">No matching events</h4>
-                <p class="text-muted mb-3">
-                    Try changing the selected filters or clearing them to see more results.
-                </p>
-                <button class="btn btn-outline-primary" @onclick="ClearFilters">Clear Filters</button>
-            </div>
+            <RadzenCard class="filters-card">
+                <RadzenStack Gap="1.25rem">
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Center"
+                                 Wrap="FlexWrap.Wrap"
+                                 Gap="0.75rem">
+                        <RadzenStack Gap="0.2rem">
+                            <RadzenText TextStyle="TextStyle.H6" class="section-title">
+                                Filter Events
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body2" class="section-subtitle">
+                                Narrow the list to find the events that fit you best.
+                            </RadzenText>
+                        </RadzenStack>
+
+                        <RadzenButton Text="Clear All"
+                                      Icon="restart_alt"
+                                      Variant="Variant.Outlined"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Click="@ClearFilters" />
+                    </RadzenStack>
+
+                    <RadzenRow Gap="1rem" RowGap="1rem">
+                        <RadzenColumn Size="12" SizeMD="6" SizeXL="3">
+                            <RadzenStack Gap="0.35rem">
+                                <RadzenText TextStyle="TextStyle.Body2" class="field-label">Category</RadzenText>
+                                <RadzenDropDown @bind-Value="selectedCategory"
+                                                Data="@categories"
+                                                AllowClear="true"
+                                                Placeholder="All Categories"
+                                                Style="width: 100%;"
+                                                class="radzen-input" />
+                            </RadzenStack>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="12" SizeMD="6" SizeXL="3">
+                            <RadzenStack Gap="0.35rem">
+                                <RadzenText TextStyle="TextStyle.Body2" class="field-label">City / Location</RadzenText>
+                                <RadzenTextBox @bind-Value="locationFilter"
+                                               Placeholder="Search by location"
+                                               Style="width: 100%;"
+                                               class="radzen-input" />
+                            </RadzenStack>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="12" SizeMD="6" SizeXL="2">
+                            <RadzenStack Gap="0.35rem">
+                                <RadzenText TextStyle="TextStyle.Body2" class="field-label">Min Price</RadzenText>
+                                <RadzenNumeric @bind-Value="minPrice"
+                                               TValue="decimal?"
+                                               Placeholder="0.00"
+                                               Style="width: 100%;"
+                                               class="radzen-input" />
+                            </RadzenStack>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="12" SizeMD="6" SizeXL="2">
+                            <RadzenStack Gap="0.35rem">
+                                <RadzenText TextStyle="TextStyle.Body2" class="field-label">Max Price</RadzenText>
+                                <RadzenNumeric @bind-Value="maxPrice"
+                                               TValue="decimal?"
+                                               Placeholder="0.00"
+                                               Style="width: 100%;"
+                                               class="radzen-input" />
+                            </RadzenStack>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="12" SizeXL="2">
+                            <RadzenStack Gap="0.35rem" class="free-only-box">
+                                <RadzenText TextStyle="TextStyle.Body2" class="field-label">Quick Option</RadzenText>
+                                <RadzenStack Orientation="Orientation.Horizontal"
+                                             AlignItems="AlignItems.Center"
+                                             Gap="0.65rem"
+                                             class="free-switch-row">
+                                    <RadzenSwitch @bind-Value="freeOnly" />
+                                    <RadzenText TextStyle="TextStyle.Body2" class="switch-label">
+                                        Free events only
+                                    </RadzenText>
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenStack>
+            </RadzenCard>
+        }
+
+        @if (HasActiveFilters)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         Wrap="FlexWrap.Wrap"
+                         Gap="0.65rem"
+                         class="active-filters">
+                @if (!string.IsNullOrWhiteSpace(selectedCategory))
+                {
+                    <div class="filter-chip">
+                        <span>Category: @selectedCategory</span>
+                        <RadzenButton Icon="close"
+                                      Size="ButtonSize.Small"
+                                      Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      class="chip-button"
+                                      Click="@ClearCategory" />
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(locationFilter))
+                {
+                    <div class="filter-chip">
+                        <span>Location: @locationFilter</span>
+                        <RadzenButton Icon="close"
+                                      Size="ButtonSize.Small"
+                                      Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      class="chip-button"
+                                      Click="@ClearLocation" />
+                    </div>
+                }
+
+                @if (minPrice.HasValue)
+                {
+                    <div class="filter-chip">
+                        <span>Min: @minPrice.Value.ToString("F2") lv.</span>
+                        <RadzenButton Icon="close"
+                                      Size="ButtonSize.Small"
+                                      Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      class="chip-button"
+                                      Click="@ClearMinPrice" />
+                    </div>
+                }
+
+                @if (maxPrice.HasValue)
+                {
+                    <div class="filter-chip">
+                        <span>Max: @maxPrice.Value.ToString("F2") lv.</span>
+                        <RadzenButton Icon="close"
+                                      Size="ButtonSize.Small"
+                                      Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      class="chip-button"
+                                      Click="@ClearMaxPrice" />
+                    </div>
+                }
+
+                @if (freeOnly)
+                {
+                    <div class="filter-chip">
+                        <span>Free only</span>
+                        <RadzenButton Icon="close"
+                                      Size="ButtonSize.Small"
+                                      Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      class="chip-button"
+                                      Click="@ClearFreeOnly" />
+                    </div>
+                }
+            </RadzenStack>
+        }
+
+        @if (events == null)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" />
+                    <RadzenText TextStyle="TextStyle.Body1">Loading events...</RadzenText>
+                </RadzenStack>
+            </RadzenCard>
         }
         else
         {
-            <div class="row g-4">
-                @foreach (var ev in filteredAndSortedEvents)
-                {
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card event-card h-100 shadow-sm">
-                            <img src="@(string.IsNullOrWhiteSpace(ev.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : ev.ImageUrl)"
-                                 class="card-img-top event-image"
-                                 alt="@ev.Title" />
+            <RadzenCard class="results-card">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             JustifyContent="JustifyContent.SpaceBetween"
+                             AlignItems="AlignItems.Center"
+                             Wrap="FlexWrap.Wrap"
+                             Gap="0.75rem">
+                    <RadzenText TextStyle="TextStyle.Body1" class="results-count">
+                        @filteredAndSortedEvents.Count() event(s) found
+                    </RadzenText>
 
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
-                                    <h5 class="card-title mb-0">@ev.Title</h5>
-                                    <span class="badge bg-light text-dark category-badge">@ev.Category</span>
-                                </div>
+                    <RadzenText TextStyle="TextStyle.Body2" class="results-hint">
+                        Showing active upcoming events
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
 
-                                <p class="text-muted mb-2">
-                                    <strong>Date:</strong> @ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-                                </p>
-
-                                <p class="text-muted mb-2">
-                                    <strong>Location:</strong> @ev.Location
-                                </p>
-
-                                <p class="card-text">
-                                    @(string.IsNullOrWhiteSpace(ev.Description)
-                                        ? "No description available."
-                                        : (ev.Description.Length > 100
-                                            ? ev.Description.Substring(0, 100) + "..."
-                                            : ev.Description))
-                                </p>
-
-                                <p class="mb-3">
-                                    <strong>Price:</strong> @(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")
-                                </p>
-
-                                <a class="btn btn-outline-primary mt-auto" href="/events/@ev.Id">
-                                    View More
-                                </a>
-                            </div>
+            @if (!filteredAndSortedEvents.Any())
+            {
+                <RadzenCard class="empty-card">
+                    <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                        <div class="empty-icon-wrap">
+                            <RadzenIcon Icon="search_off" class="empty-icon" />
                         </div>
-                    </div>
-                }
-            </div>
+
+                        <RadzenText TextStyle="TextStyle.H5" class="empty-title">
+                            No matching events
+                        </RadzenText>
+
+                        <RadzenText TextStyle="TextStyle.Body1" class="empty-text">
+                            Try changing the selected filters or clearing them to see more results.
+                        </RadzenText>
+
+                        <RadzenButton Text="Clear Filters"
+                                      Icon="restart_alt"
+                                      Variant="Variant.Outlined"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Click="@ClearFilters" />
+                    </RadzenStack>
+                </RadzenCard>
+            }
+            else
+            {
+                <RadzenRow Gap="1.5rem" RowGap="1.5rem" class="cards-row">
+                    @foreach (var ev in filteredAndSortedEvents)
+                    {
+                        <RadzenColumn Size="12" SizeMD="6" SizeXL="4">
+                            <RadzenCard class="event-card">
+                                <RadzenStack Gap="0" class="event-card-stack">
+                                    <div class="image-wrap">
+                                        <img src="@(string.IsNullOrWhiteSpace(ev.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : ev.ImageUrl)"
+                                             alt="@ev.Title"
+                                             class="event-image" />
+
+                                        <RadzenBadge Text="@ev.Category"
+                                                     class="category-badge" />
+                                    </div>
+
+                                    <RadzenStack Gap="0.95rem" class="event-content">
+                                        <RadzenStack Gap="0.35rem">
+                                            <RadzenText TextStyle="TextStyle.H6" class="event-title">
+                                                @ev.Title
+                                            </RadzenText>
+
+                                            <RadzenText TextStyle="TextStyle.Body2" class="description-text">
+                                                @(string.IsNullOrWhiteSpace(ev.Description)
+                                                    ? "No description available."
+                                                    : (ev.Description.Length > 100
+                                                        ? ev.Description.Substring(0, 100) + "..."
+                                                        : ev.Description))
+                                            </RadzenText>
+                                        </RadzenStack>
+
+                                        <RadzenStack Gap="0.75rem" class="details-stack">
+                                            <RadzenStack Orientation="Orientation.Horizontal"
+                                                         AlignItems="AlignItems.Start"
+                                                         Gap="0.65rem">
+                                                <div class="detail-icon-wrap">
+                                                    <RadzenIcon Icon="calendar_month" class="detail-icon" />
+                                                </div>
+                                                <RadzenStack Gap="0.15rem">
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Date</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                        @ev.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                                    </RadzenText>
+                                                </RadzenStack>
+                                            </RadzenStack>
+
+                                            <RadzenStack Orientation="Orientation.Horizontal"
+                                                         AlignItems="AlignItems.Start"
+                                                         Gap="0.65rem">
+                                                <div class="detail-icon-wrap">
+                                                    <RadzenIcon Icon="place" class="detail-icon" />
+                                                </div>
+                                                <RadzenStack Gap="0.15rem">
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Location</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                        @ev.Location
+                                                    </RadzenText>
+                                                </RadzenStack>
+                                            </RadzenStack>
+
+                                            <RadzenStack Orientation="Orientation.Horizontal"
+                                                         AlignItems="AlignItems.Start"
+                                                         Gap="0.65rem">
+                                                <div class="detail-icon-wrap">
+                                                    <RadzenIcon Icon="payments" class="detail-icon" />
+                                                </div>
+                                                <RadzenStack Gap="0.15rem">
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Price</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                        @(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")
+                                                    </RadzenText>
+                                                </RadzenStack>
+                                            </RadzenStack>
+                                        </RadzenStack>
+
+                                        <RadzenButton Text="View More"
+                                                      Icon="arrow_forward"
+                                                      Variant="Variant.Outlined"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      class="view-button"
+                                                      Click='@(() => NavigationManager.NavigateTo($"/events/{ev.Id}"))' />
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+                    }
+                </RadzenRow>
+            }
         }
-    }
+    </RadzenStack>
 </div>
 
 <style>
-    .events-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: end;
-        gap: 1rem;
-        flex-wrap: wrap;
+    .events-page {
+        padding: 1.5rem;
     }
 
-    .events-toolbar {
-        display: flex;
-        gap: 0.75rem;
-        align-items: end;
-        flex-wrap: wrap;
+    .page-stack {
+        max-width: 88rem;
+        margin: 0 auto;
+    }
+
+    .page-header-card,
+    .filters-card,
+    .results-card,
+    .state-card,
+    .empty-card,
+    .event-card {
+        border: none;
+        border-radius: 1.5rem;
+        box-shadow: 0 1.125rem 2.8125rem rgba(15, 23, 42, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    }
+
+    .page-header-card {
+        padding: 0.5rem;
+    }
+
+    .page-title {
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .page-subtitle,
+    .section-subtitle,
+    .results-hint,
+    .description-text {
+        color: #64748b;
+    }
+
+    .header-actions {
+        width: auto;
     }
 
     .sort-box {
-        min-width: 240px;
+        min-width: 16rem;
     }
 
-    .filters-toggle-btn {
-        height: 38px;
-        min-width: 130px;
+    .filters-toggle-button {
+        min-width: 9rem;
     }
 
-    .filters-panel {
-        border-radius: 18px;
+    .field-label,
+    .detail-label {
+        color: #64748b;
+        font-weight: 600;
     }
 
-    .filters-bottom-row {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        border-top: 1px solid #eceff3;
-        padding-top: 1rem;
+    .filters-card,
+    .results-card,
+    .state-card,
+    .empty-card {
+        padding: 1.25rem;
     }
 
-    .free-only-switch {
-        margin-bottom: 0;
+    .section-title {
+        font-weight: 700;
+        color: #0f172a;
     }
 
-        .free-only-switch .form-check-input {
-            cursor: pointer;
-            transform: scale(1.1);
-        }
+    .free-only-box {
+        height: 100%;
+    }
 
-        .free-only-switch .form-check-label {
-            font-weight: 500;
-            cursor: pointer;
-        }
+    .free-switch-row {
+        min-height: 2.875rem;
+        padding: 0.55rem 0.8rem;
+        border-radius: 1rem;
+        background: #f8fafc;
+        border: 0.0625rem solid #e2e8f0;
+    }
+
+    .switch-label {
+        color: #0f172a;
+        font-weight: 500;
+    }
 
     .active-filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem;
+        margin-top: -0.25rem;
     }
 
     .filter-chip {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        background: #f1f3f5;
-        border: 1px solid #dee2e6;
-        border-radius: 999px;
-        padding: 0.45rem 0.8rem;
+        gap: 0.3rem;
+        background: #f8fafc;
+        border: 0.0625rem solid #e2e8f0;
+        border-radius: 999rem;
+        padding: 0.3rem 0.45rem 0.3rem 0.8rem;
+        color: #334155;
         font-size: 0.92rem;
     }
 
-        .filter-chip button {
-            border: none;
-            background: transparent;
-            padding: 0;
-            line-height: 1;
-            font-size: 1rem;
-            cursor: pointer;
-            color: #6c757d;
-        }
-
-    .results-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .chip-button {
+        min-width: auto !important;
+        width: 1.9rem;
+        height: 1.9rem;
+        border-radius: 999rem;
     }
 
     .results-count {
-        color: #6c757d;
-        font-weight: 500;
+        color: #334155;
+        font-weight: 700;
     }
 
-    .event-card {
-        border: none;
-        border-radius: 16px;
-        overflow: hidden;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    .state-stack {
+        padding: 1rem 0;
     }
 
-        .event-card:hover {
-            transform: scale(1.03);
-            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15) !important;
-        }
-
-    .event-image {
-        height: 220px;
-        object-fit: cover;
-    }
-
-    .category-badge {
-        border-radius: 999px;
-        font-weight: 500;
-        padding: 0.45rem 0.7rem;
-        white-space: nowrap;
-    }
-
-    .empty-state {
-        background: #fff;
-        border: 1px solid #e9ecef;
-        border-radius: 20px;
-        padding: 2.5rem 1.5rem;
-        text-align: center;
+    .empty-icon-wrap {
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59, 130, 246, 0.10);
     }
 
     .empty-icon {
         font-size: 2rem;
-        color: #6c757d;
+        color: #2563eb;
+    }
+
+    .empty-title {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .empty-text {
+        color: #64748b;
+        text-align: center;
+        max-width: 32rem;
+    }
+
+    .cards-row {
+        margin: 0;
+    }
+
+    .event-card {
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        height: 100%;
+    }
+
+    .event-card:hover {
+        transform: translateY(-0.3rem);
+        box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.13);
+    }
+
+    .event-card-stack {
+        height: 100%;
+    }
+
+    .image-wrap {
+        position: relative;
+    }
+
+    .event-image {
+        width: 100%;
+        height: 14rem;
+        object-fit: cover;
+        display: block;
+    }
+
+    .category-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        border-radius: 999rem;
+        padding: 0.4rem 0.8rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.94) !important;
+        color: #0f172a !important;
+        box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.12);
+    }
+
+    .event-content {
+        padding: 1.25rem;
+        flex: 1;
+        justify-content: space-between;
+        min-height: 18rem;
+    }
+
+    .event-title {
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+
+    .details-stack {
+        padding-top: 0.15rem;
+    }
+
+    .detail-icon-wrap {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.85rem;
+        background: rgba(37, 99, 235, 0.10);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .detail-icon {
+        color: #2563eb;
+        font-size: 1.1rem;
+    }
+
+    .detail-value {
+        color: #0f172a;
+        font-weight: 500;
+        word-break: break-word;
+    }
+
+    .view-button {
+        margin-top: auto;
+        justify-content: center;
+    }
+
+    @@media (max-width: 75rem) {
+        .events-page {
+            padding: 1rem;
+        }
+
+        .page-stack {
+            max-width: 100%;
+        }
+    }
+
+    @@media (max-width: 40rem) {
+        .sort-box {
+            min-width: 100%;
+        }
+
+        .filters-toggle-button {
+            width: 100%;
+        }
+
+        .event-image {
+            height: 12rem;
+        }
+
+        .event-content {
+            padding: 1rem;
+            min-height: auto;
+        }
     }
 </style>
 
@@ -350,6 +643,14 @@
         "Festival",
         "Seminar",
         "Other"
+    };
+
+    private readonly List<SortOption> sortOptions = new()
+    {
+        new() { Text = "Date: Soonest First", Value = "date_asc" },
+        new() { Text = "Date: Latest First", Value = "date_desc" },
+        new() { Text = "Price: Low to High", Value = "price_asc" },
+        new() { Text = "Price: High to Low", Value = "price_desc" }
     };
 
     private bool HasActiveFilters =>
@@ -429,9 +730,34 @@
         selectedSort = "date_asc";
     }
 
-    private void ClearCategory() => selectedCategory = string.Empty;
-    private void ClearLocation() => locationFilter = string.Empty;
-    private void ClearMinPrice() => minPrice = null;
-    private void ClearMaxPrice() => maxPrice = null;
-    private void ClearFreeOnly() => freeOnly = false;
+    private void ClearCategory()
+    {
+        selectedCategory = string.Empty;
+    }
+
+    private void ClearLocation()
+    {
+        locationFilter = string.Empty;
+    }
+
+    private void ClearMinPrice()
+    {
+        minPrice = null;
+    }
+
+    private void ClearMaxPrice()
+    {
+        maxPrice = null;
+    }
+
+    private void ClearFreeOnly()
+    {
+        freeOnly = false;
+    }
+
+    private class SortOption
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+    }
 }

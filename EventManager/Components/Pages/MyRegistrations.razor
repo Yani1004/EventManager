@@ -7,99 +7,373 @@
 @using EventManager.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
 @inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>My Registrations</PageTitle>
 
-<div class="container py-4">
-    <h1 class="mb-4">My Registrations</h1>
+<div class="my-registrations-page">
+    <RadzenStack Gap="1.5rem" class="page-stack">
 
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <div class="alert @messageCss mb-4">@message</div>
-    }
+        <RadzenCard class="page-header-card">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Center"
+                         Wrap="FlexWrap.Wrap"
+                         Gap="1rem">
+                <RadzenStack Gap="0.35rem">
+                    <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="page-title">
+                        My Registrations
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="page-subtitle">
+                        View the events you joined and manage your registrations in one place.
+                    </RadzenText>
+                </RadzenStack>
 
-    @if (isLoading)
-    {
-        <p>Loading registrations...</p>
-    }
-    else if (!registrations.Any())
-    {
-        <div class="alert alert-info">
-            You have not registered for any events yet.
-        </div>
-    }
-    else
-    {
-        <div class="row g-4">
-            @foreach (var reg in registrations)
-            {
-                <div class="col-md-6 col-lg-4">
-                    <div class="card registration-card h-100 shadow-sm border-0">
-                        <img src="@(string.IsNullOrWhiteSpace(reg.Event?.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.Event.ImageUrl)"
-                             class="card-img-top registration-image"
-                             alt="@reg.Event?.Title" />
+                <RadzenButton Text="Browse Events"
+                              Icon="explore"
+                              Size="ButtonSize.Large"
+                              Click='@(() => NavigationManager.NavigateTo("/events"))' />
+            </RadzenStack>
+        </RadzenCard>
 
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
-                                <h5 class="card-title mb-0">@reg.Event?.Title</h5>
-                                <span class="badge bg-light text-dark category-badge">@reg.Event?.Category</span>
-                            </div>
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <RadzenAlert AlertStyle="@messageStyle"
+                         Variant="Variant.Flat"
+                         Shade="Shade.Light"
+                         class="feedback-alert">
+                @message
+            </RadzenAlert>
+        }
 
-                            <p class="text-muted mb-2">
-                                <strong>Date:</strong> @reg.Event?.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-                            </p>
-
-                            <p class="text-muted mb-2">
-                                <strong>Location:</strong> @reg.Event?.Location
-                            </p>
-
-                            <p class="text-muted mb-3">
-                                <strong>Registered:</strong> @reg.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-                            </p>
-
-                            <div class="mt-auto d-flex gap-2">
-                                <a class="btn btn-outline-primary flex-fill" href="/events/@reg.EventId">
-                                    View Event
-                                </a>
-
-                                <button class="btn btn-outline-danger flex-fill"
-                                        @onclick="() => CancelRegistration(reg.Id)">
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
+        @if (isLoading)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" />
+                    <RadzenText TextStyle="TextStyle.Body1">Loading registrations...</RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else if (!registrations.Any())
+        {
+            <RadzenCard class="empty-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <div class="empty-icon-wrap">
+                        <RadzenIcon Icon="confirmation_number" class="empty-icon" />
                     </div>
-                </div>
-            }
-        </div>
-    }
+
+                    <RadzenText TextStyle="TextStyle.H5" class="empty-title">
+                        No registrations yet
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Body1" class="empty-text">
+                        You have not registered for any events yet. Explore upcoming events and join the ones you like.
+                    </RadzenText>
+
+                    <RadzenButton Text="Explore Events"
+                                  Icon="travel_explore"
+                                  Size="ButtonSize.Medium"
+                                  Click='@(() => NavigationManager.NavigateTo("/events"))' />
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <RadzenRow Gap="1.5rem" RowGap="1.5rem" class="cards-row">
+                @foreach (var reg in registrations)
+                {
+                    <RadzenColumn Size="12" SizeMD="6" SizeXL="4">
+                        <RadzenCard class="registration-card">
+                            <RadzenStack Gap="0" class="registration-card-stack">
+                                <div class="image-wrap">
+                                    <img src="@(string.IsNullOrWhiteSpace(reg.Event?.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.Event!.ImageUrl)"
+                                         alt="@reg.Event?.Title"
+                                         class="registration-image" />
+                                    <RadzenBadge Text="@reg.Event?.Category"
+                                                 class="category-badge" />
+                                </div>
+
+                                <RadzenStack Gap="0.85rem" class="registration-content">
+                                    <RadzenStack Gap="0.35rem">
+                                        <RadzenText TextStyle="TextStyle.H6" class="event-title">
+                                            @reg.Event?.Title
+                                        </RadzenText>
+
+                                        <RadzenText TextStyle="TextStyle.Body2" class="description-text">
+                                            Registered event details and quick actions.
+                                        </RadzenText>
+                                    </RadzenStack>
+
+                                    <RadzenStack Gap="0.7rem" class="details-stack">
+                                        <RadzenStack Orientation="Orientation.Horizontal"
+                                                     AlignItems="AlignItems.Start"
+                                                     Gap="0.65rem">
+                                            <div class="detail-icon-wrap">
+                                                <RadzenIcon Icon="calendar_month" class="detail-icon" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Event Date</RadzenText>
+                                                <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                    @reg.Event?.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                                </RadzenText>
+                                            </RadzenStack>
+                                        </RadzenStack>
+
+                                        <RadzenStack Orientation="Orientation.Horizontal"
+                                                     AlignItems="AlignItems.Start"
+                                                     Gap="0.65rem">
+                                            <div class="detail-icon-wrap">
+                                                <RadzenIcon Icon="place" class="detail-icon" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Location</RadzenText>
+                                                <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                    @reg.Event?.Location
+                                                </RadzenText>
+                                            </RadzenStack>
+                                        </RadzenStack>
+
+                                        <RadzenStack Orientation="Orientation.Horizontal"
+                                                     AlignItems="AlignItems.Start"
+                                                     Gap="0.65rem">
+                                            <div class="detail-icon-wrap">
+                                                <RadzenIcon Icon="how_to_reg" class="detail-icon" />
+                                            </div>
+                                            <RadzenStack Gap="0.15rem">
+                                                <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Registered On</RadzenText>
+                                                <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
+                                                    @reg.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                                </RadzenText>
+                                            </RadzenStack>
+                                        </RadzenStack>
+                                    </RadzenStack>
+
+                                    <RadzenStack Orientation="Orientation.Horizontal"
+                                                 Gap="0.75rem"
+                                                 Wrap="FlexWrap.Wrap"
+                                                 class="actions-row">
+                                        <RadzenButton Text="View Event"
+                                                      Icon="visibility"
+                                                      Variant="Variant.Outlined"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      class="action-button"
+                                                      Click='@(() => NavigationManager.NavigateTo($"/events/{reg.EventId}"))' />
+
+                                        <RadzenButton Text="Cancel"
+                                                      Icon="close"
+                                                      Variant="Variant.Outlined"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      class="action-button"
+                                                      Click='@(() => CancelRegistration(reg.Id))' />
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+                }
+            </RadzenRow>
+        }
+    </RadzenStack>
 </div>
 
 <style>
-    .registration-card {
-        border-radius: 16px;
-        overflow: hidden;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    .my-registrations-page {
+        padding: 1.5rem;
     }
 
-        .registration-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.12) !important;
-        }
+    .page-stack {
+        max-width: 88rem;
+        margin: 0 auto;
+    }
+
+    .page-header-card,
+    .state-card,
+    .empty-card,
+    .registration-card {
+        border: none;
+        border-radius: 1.5rem;
+        box-shadow: 0 1.125rem 2.8125rem rgba(15, 23, 42, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    }
+
+    .page-header-card {
+        padding: 0.5rem;
+    }
+
+    .page-title {
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .page-subtitle {
+        color: #64748b;
+    }
+
+    .feedback-alert {
+        border-radius: 1rem;
+    }
+
+    .state-card,
+    .empty-card {
+        padding: 1.5rem;
+    }
+
+    .state-stack {
+        padding: 1rem 0;
+    }
+
+    .empty-icon-wrap {
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59, 130, 246, 0.10);
+    }
+
+    .empty-icon {
+        font-size: 2rem;
+        color: #2563eb;
+    }
+
+    .empty-title {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .empty-text {
+        color: #64748b;
+        text-align: center;
+        max-width: 32rem;
+    }
+
+    .cards-row {
+        margin: 0;
+    }
+
+    .registration-card {
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        height: 100%;
+    }
+
+    .registration-card:hover {
+        transform: translateY(-0.25rem);
+        box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.12);
+    }
+
+    .registration-card-stack {
+        height: 100%;
+    }
+
+    .image-wrap {
+        position: relative;
+    }
 
     .registration-image {
-        height: 220px;
+        width: 100%;
+        height: 14rem;
         object-fit: cover;
+        display: block;
     }
 
     .category-badge {
-        border-radius: 999px;
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        border-radius: 999rem;
+        padding: 0.4rem 0.8rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.92) !important;
+        color: #0f172a !important;
+        box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.12);
+    }
+
+    .registration-content {
+        padding: 1.25rem;
+        flex: 1;
+        justify-content: space-between;
+        min-height: 17rem;
+    }
+
+    .event-title {
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+
+    .description-text {
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+    .details-stack {
+        padding-top: 0.25rem;
+    }
+
+    .detail-icon-wrap {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.85rem;
+        background: rgba(37, 99, 235, 0.10);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .detail-icon {
+        color: #2563eb;
+        font-size: 1.1rem;
+    }
+
+    .detail-label {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .detail-value {
+        color: #0f172a;
         font-weight: 500;
-        padding: 0.45rem 0.7rem;
-        white-space: nowrap;
+        word-break: break-word;
+    }
+
+    .actions-row {
+        margin-top: auto;
+    }
+
+    .action-button {
+        flex: 1 1 10rem;
+        justify-content: center;
+    }
+
+    @@media (max-width: 75rem) {
+        .my-registrations-page {
+            padding: 1rem;
+        }
+
+        .page-stack {
+            max-width: 100%;
+        }
+    }
+
+    @@media (max-width: 40rem) {
+        .registration-image {
+            height: 12rem;
+        }
+
+        .registration-content {
+            padding: 1rem;
+            min-height: auto;
+        }
     }
 </style>
 
@@ -108,7 +382,7 @@
     private bool isLoading = true;
 
     private string message = string.Empty;
-    private string messageCss = "alert-info";
+    private AlertStyle messageStyle = AlertStyle.Info;
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,7 +424,7 @@
         if (string.IsNullOrWhiteSpace(userId))
         {
             message = "Could not identify the current user.";
-            messageCss = "alert-danger";
+            messageStyle = AlertStyle.Danger;
             return;
         }
 
@@ -160,7 +434,7 @@
         if (registration == null)
         {
             message = "Registration not found.";
-            messageCss = "alert-danger";
+            messageStyle = AlertStyle.Danger;
             return;
         }
 
@@ -168,8 +442,8 @@
         await Db.SaveChangesAsync();
 
         message = "Registration cancelled successfully.";
-        messageCss = "alert-success";
+        messageStyle = AlertStyle.Success;
 
         await LoadRegistrations();
     }
-}
+}   
