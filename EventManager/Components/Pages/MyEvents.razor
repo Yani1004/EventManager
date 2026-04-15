@@ -368,15 +368,6 @@
         padding: 0.35rem 0.8rem;
     }
 
-    @@media (max-width: 75rem) {
-        .my-events-page {
-            padding: 1rem;
-        }
-
-        .page-stack {
-            max-width: 100%;
-        }
-    }
 </style>
 
 @code {
@@ -391,11 +382,7 @@
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            myEvents = await Db.Events
-                .Include(e => e.Registrations)
-                .Where(e => e.CreatorId == userId)
-                .OrderByDescending(e => e.Date)
-                .ToListAsync();
+            myEvents = await Db.Events.Include(e => e.Registrations).Where(e => e.CreatorId == userId).OrderByDescending(e => e.Date).ToListAsync();
         }
 
         isLoading = false;
