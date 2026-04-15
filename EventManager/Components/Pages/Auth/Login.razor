@@ -1,343 +1,343 @@
-﻿@page "/login"
-@rendermode InteractiveServer
+﻿    @page "/login"
+    @rendermode InteractiveServer
 
-@using EventManager.Models
-@using Radzen
-@using Radzen.Blazor
+    @using EventManager.Models
+    @using Radzen
+    @using Radzen.Blazor
 
-<PageTitle>Login</PageTitle>
+    <PageTitle>Login</PageTitle>
 
-<div class="login-page">
-    <div class="login-shell">
-        <div class="login-brand-panel">
-            <RadzenCard class="brand-card">
-                <RadzenStack Gap="1.25rem" class="h-100">
-                    <div class="brand-icon-wrap">
-                        <RadzenIcon Icon="event" class="brand-icon" />
-                    </div>
-
-                    <div>
-                        <h1 class="brand-title">EventManager</h1>
-                        <p class="brand-subtitle">
-                            Welcome back. Sign in to manage events, registrations, and your account in one place.
-                        </p>
-                    </div>
-
-                    <RadzenStack Gap="0.75rem" class="brand-points">
-                        <div class="feature-item">
-                            <RadzenIcon Icon="check_circle" />
-                            <span>Modern event dashboard</span>
+    <div class="login-page">
+        <div class="login-shell">
+            <div class="login-brand-panel">
+                <RadzenCard class="brand-card">
+                    <RadzenStack Gap="1.25rem" class="h-100">
+                        <div class="brand-icon-wrap">
+                            <RadzenIcon Icon="event" class="brand-icon" />
                         </div>
 
-                        <div class="feature-item">
-                            <RadzenIcon Icon="check_circle" />
-                            <span>Fast registration management</span>
+                        <div>
+                            <h1 class="brand-title">EventManager</h1>
+                            <p class="brand-subtitle">
+                                Welcome back. Sign in to manage events, registrations, and your account in one place.
+                            </p>
                         </div>
 
-                        <div class="feature-item">
-                            <RadzenIcon Icon="check_circle" />
-                            <span>Role-based access for every user</span>
-                        </div>
-                    </RadzenStack>
-                </RadzenStack>
-            </RadzenCard>
-        </div>
-
-        <div class="login-form-panel">
-            <RadzenCard class="login-card">
-                <RadzenStack Gap="1.5rem">
-                    <div class="login-header">
-                        <RadzenBadge Text="Secure Access" Shade="Shade.Light" Variant="Variant.Flat" class="login-badge" />
-                        <h2>Login</h2>
-                        <p>Enter your email and password to continue.</p>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
-                    {
-                        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Light">
-                            @ErrorMessage
-                        </RadzenAlert>
-                    }
-
-                    <RadzenTemplateForm TItem="LoginInputModel"
-                                        Data="@loginModel"
-                                        Submit="@HandleSubmit"
-                                        class="login-form">
-
-                        <RadzenStack Gap="1.1rem">
-                            <div class="form-field">
-                                <RadzenLabel Text="Email" Component="Email" class="form-label" />
-                                <RadzenTextBox Name="Email"
-                                               @bind-Value="loginModel.Email"
-                                               Placeholder="you@example.com"
-                                               Style="width: 100%;"
-                                               class="input-control" />
-                                <RadzenRequiredValidator Component="Email"
-                                                         Text="Email is required."
-                                                         Popup="false"
-                                                         Style="position: relative;" />
-                                <RadzenEmailValidator Component="Email"
-                                                      Text="Please enter a valid email address."
-                                                      Popup="false"
-                                                      Style="position: relative;" />
+                        <RadzenStack Gap="0.75rem" class="brand-points">
+                            <div class="feature-item">
+                                <RadzenIcon Icon="check_circle" />
+                                <span>Modern event dashboard</span>
                             </div>
 
-                            <div class="form-field">
-                                <RadzenLabel Text="Password" Component="Password" class="form-label" />
-                                <RadzenPassword Name="Password"
-                                                @bind-Value="loginModel.Password"
-                                                Placeholder="Enter your password"
-                                                Style="width: 100%;"
-                                                class="input-control" />
-                                <RadzenRequiredValidator Component="Password"
-                                                         Text="Password is required."
-                                                         Popup="false"
-                                                         Style="position: relative;" />
+                            <div class="feature-item">
+                                <RadzenIcon Icon="check_circle" />
+                                <span>Fast registration management</span>
                             </div>
 
-                            <div class="remember-row">
-                                <RadzenCheckBox Name="RememberMe" @bind-Value="loginModel.RememberMe" TValue="bool" />
-                                <RadzenLabel Text="Remember me" Component="RememberMe" />
+                            <div class="feature-item">
+                                <RadzenIcon Icon="check_circle" />
+                                <span>Role-based access for every user</span>
                             </div>
-
-                            <RadzenButton Text="Login"
-                                          Icon="login"
-                                          ButtonStyle="ButtonStyle.Primary"
-                                          Variant="Variant.Flat"
-                                          ButtonType="ButtonType.Submit"
-                                          class="login-button" />
                         </RadzenStack>
-                    </RadzenTemplateForm>
-                </RadzenStack>
-            </RadzenCard>
+                    </RadzenStack>
+                </RadzenCard>
+            </div>
+
+            <div class="login-form-panel">
+                <RadzenCard class="login-card">
+                    <RadzenStack Gap="1.5rem">
+                        <div class="login-header">
+                            <RadzenBadge Text="Secure Access" Shade="Shade.Light" Variant="Variant.Flat" class="login-badge" />
+                            <h2>Login</h2>
+                            <p>Enter your email and password to continue.</p>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Light">
+                                @ErrorMessage
+                            </RadzenAlert>
+                        }
+
+                        <RadzenTemplateForm TItem="LoginInputModel"
+                                            Data="@loginModel"
+                                            Submit="@HandleSubmit"
+                                            class="login-form">
+
+                            <RadzenStack Gap="1.1rem">
+                                <div class="form-field">
+                                    <RadzenLabel Text="Email" Component="Email" class="form-label" />
+                                    <RadzenTextBox Name="Email"
+                                                   @bind-Value="loginModel.Email"
+                                                   Placeholder="you@example.com"
+                                                   Style="width: 100%;"
+                                                   class="input-control" />
+                                    <RadzenRequiredValidator Component="Email"
+                                                             Text="Email is required."
+                                                             Popup="false"
+                                                             Style="position: relative;" />
+                                    <RadzenEmailValidator Component="Email"
+                                                          Text="Please enter a valid email address."
+                                                          Popup="false"
+                                                          Style="position: relative;" />
+                                </div>
+
+                                <div class="form-field">
+                                    <RadzenLabel Text="Password" Component="Password" class="form-label" />
+                                    <RadzenPassword Name="Password"
+                                                    @bind-Value="loginModel.Password"
+                                                    Placeholder="Enter your password"
+                                                    Style="width: 100%;"
+                                                    class="input-control" />
+                                    <RadzenRequiredValidator Component="Password"
+                                                             Text="Password is required."
+                                                             Popup="false"
+                                                             Style="position: relative;" />
+                                </div>
+
+                                <div class="remember-row">
+                                    <RadzenCheckBox Name="RememberMe" @bind-Value="loginModel.RememberMe" TValue="bool" />
+                                    <RadzenLabel Text="Remember me" Component="RememberMe" />
+                                </div>
+
+                                <RadzenButton Text="Login"
+                                              Icon="login"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Variant="Variant.Flat"
+                                              ButtonType="ButtonType.Submit"
+                                              class="login-button" />
+                            </RadzenStack>
+                        </RadzenTemplateForm>
+                    </RadzenStack>
+                </RadzenCard>
+            </div>
         </div>
     </div>
-</div>
 
-<style>
-    .login-page {
-        min-height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem 1rem;
-        /* background: radial-gradient(circle at top left, rgba(63, 81, 181, 0.16), transparent 35%), radial-gradient(circle at bottom right, rgba(33, 150, 243, 0.14), transparent 30%), linear-gradient(135deg, #f8fafc 0%, #eef4ff 100%); */
-    }
-
-        .login-page .login-shell {
-            width: 100%;
-            max-width: 1120px;
-            display: grid;
-            grid-template-columns: 1.05fr 0.95fr;
-            gap: 1.5rem;
-            align-items: stretch;
-        }
-
-        .login-page .brand-card,
-        .login-page .login-card {
-             border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.10); 
-            border: none;
-            height: 100%;
-        }
-
-        .login-page .brand-card {
-            padding: 2.5rem;
-            background: linear-gradient(160deg, #1e3a8a 0%, #2563eb 55%, #3b82f6 100%);
-            color: white;
-            overflow: hidden;
-            position: relative;
-        }
-
-            .login-page .brand-card::before {
-                content: "";
-                position: absolute;
-                top: -60px;
-                right: -60px;
-                width: 180px;
-                height: 180px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.10);
-            }
-
-            .login-page .brand-card::after {
-                content: "";
-                position: absolute;
-                bottom: -80px;
-                left: -80px;
-                width: 220px;
-                height: 220px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.08);
-            }
-
-        .login-page .brand-icon-wrap {
-            width: 72px;
-            height: 72px;
-            border-radius: 20px;
-            display: inline-flex;
+    <style>
+        .login-page {
+            min-height: 100%;
+            display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.14);
-            backdrop-filter: blur(4px);
+            padding: 2rem 1rem;
+            /* background: radial-gradient(circle at top left, rgba(63, 81, 181, 0.16), transparent 35%), radial-gradient(circle at bottom right, rgba(33, 150, 243, 0.14), transparent 30%), linear-gradient(135deg, #f8fafc 0%, #eef4ff 100%); */
         }
 
-        .login-page .brand-icon {
-            font-size: 2rem;
-            color: white;
-        }
-
-        .login-page .brand-title {
-            margin: 0;
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1.1;
-            color: white;
-        }
-
-        .login-page .brand-subtitle {
-            margin: 0.8rem 0 0 0;
-            font-size: 1rem;
-            line-height: 1.7;
-            color: rgba(255, 255, 255, 0.88);
-            max-width: 34rem;
-        }
-
-        .login-page .brand-points {
-            margin-top: 1rem;
-        }
-
-        .login-page .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.85rem 1rem;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.10);
-            color: white;
-            font-weight: 500;
-        }
-
-            .login-page .feature-item .rzi {
-                font-size: 1.1rem;
+            .login-page .login-shell {
+                width: 100%;
+                max-width: 1120px;
+                display: grid;
+                grid-template-columns: 1.05fr 0.95fr;
+                gap: 1.5rem;
+                align-items: stretch;
             }
 
-        .login-page .login-card {
-            padding: 2.25rem;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(10px);
-        }
-
-        .login-page .login-header h2 {
-            margin: 0.75rem 0 0.35rem 0;
-            font-size: 2rem;
-            font-weight: 800;
-            color: #0f172a;
-            letter-spacing: -0.03em;
-        }
-
-        .login-page .login-header p {
-            margin: 0;
-            color: #64748b;
-            font-size: 0.98rem;
-        }
-
-        .login-page .login-badge {
-            width: fit-content;
-        }
-
-        .login-page .login-form {
-            width: 100%;
-        }
-
-        .login-page .form-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
-        }
-
-        .login-page .form-label {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #334155;
-        }
-
-        .login-page .input-control,
-        .login-page .rz-textbox,
-        .login-page .rz-password {
-            width: 100% !important;
-            border-radius: 14px !important;
-        }
-
-            .login-page .rz-inputtext,
-            .login-page .rz-textbox,
-            .login-page .rz-password input {
-                min-height: 48px;
-                padding-left: 0.95rem !important;
-                padding-right: 0.95rem !important;
-                border-radius: 14px !important;
-                border: 1px solid #dbe4f0 !important;
-                background-color: #f8fbff !important;
-                box-shadow: none !important;
+            .login-page .brand-card,
+            .login-page .login-card {
+                 border-radius: 24px;
+                box-shadow: 0 20px 50px rgba(15, 23, 42, 0.10); 
+                border: none;
+                height: 100%;
             }
 
-                .login-page .rz-inputtext:focus,
-                .login-page .rz-textbox:focus,
-                .login-page .rz-password input:focus {
-                    border-color: #3b82f6 !important;
-                    background-color: #ffffff !important;
+            .login-page .brand-card {
+                padding: 2.5rem;
+                background: linear-gradient(160deg, #1e3a8a 0%, #2563eb 55%, #3b82f6 100%);
+                color: white;
+                overflow: hidden;
+                position: relative;
+            }
+
+                .login-page .brand-card::before {
+                    content: "";
+                    position: absolute;
+                    top: -60px;
+                    right: -60px;
+                    width: 180px;
+                    height: 180px;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.10);
                 }
 
-        .login-page .rz-messages-error {
-            margin-top: 0.1rem;
-            font-size: 0.85rem;
-        }
+                .login-page .brand-card::after {
+                    content: "";
+                    position: absolute;
+                    bottom: -80px;
+                    left: -80px;
+                    width: 220px;
+                    height: 220px;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.08);
+                }
 
-        .login-page .remember-row {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding-top: 0.25rem;
-            color: #475569;
-        }
+            .login-page .brand-icon-wrap {
+                width: 72px;
+                height: 72px;
+                border-radius: 20px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.14);
+                backdrop-filter: blur(4px);
+            }
 
-        .login-page .login-button {
-            width: 100%;
-            height: 50px;
-            border-radius: 14px;
-            font-size: 1rem;
-            font-weight: 700;
-            margin-top: 0.25rem;
-        }
+            .login-page .brand-icon {
+                font-size: 2rem;
+                color: white;
+            }
+
+            .login-page .brand-title {
+                margin: 0;
+                font-size: 2.2rem;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                line-height: 1.1;
+                color: white;
+            }
+
+            .login-page .brand-subtitle {
+                margin: 0.8rem 0 0 0;
+                font-size: 1rem;
+                line-height: 1.7;
+                color: rgba(255, 255, 255, 0.88);
+                max-width: 34rem;
+            }
+
+            .login-page .brand-points {
+                margin-top: 1rem;
+            }
+
+            .login-page .feature-item {
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                padding: 0.85rem 1rem;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.10);
+                color: white;
+                font-weight: 500;
+            }
+
+                .login-page .feature-item .rzi {
+                    font-size: 1.1rem;
+                }
+
+            .login-page .login-card {
+                padding: 2.25rem;
+                background: rgba(255, 255, 255, 0.92);
+                backdrop-filter: blur(10px);
+            }
+
+            .login-page .login-header h2 {
+                margin: 0.75rem 0 0.35rem 0;
+                font-size: 2rem;
+                font-weight: 800;
+                color: #0f172a;
+                letter-spacing: -0.03em;
+            }
+
+            .login-page .login-header p {
+                margin: 0;
+                color: #64748b;
+                font-size: 0.98rem;
+            }
+
+            .login-page .login-badge {
+                width: fit-content;
+            }
+
+            .login-page .login-form {
+                width: 100%;
+            }
+
+            .login-page .form-field {
+                display: flex;
+                flex-direction: column;
+                gap: 0.45rem;
+            }
+
+            .login-page .form-label {
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: #334155;
+            }
+
+            .login-page .input-control,
+            .login-page .rz-textbox,
+            .login-page .rz-password {
+                width: 100% !important;
+                border-radius: 14px !important;
+            }
+
+                .login-page .rz-inputtext,
+                .login-page .rz-textbox,
+                .login-page .rz-password input {
+                    min-height: 48px;
+                    padding-left: 0.95rem !important;
+                    padding-right: 0.95rem !important;
+                    border-radius: 14px !important;
+                    border: 1px solid #dbe4f0 !important;
+                    background-color: #f8fbff !important;
+                    box-shadow: none !important;
+                }
+
+                    .login-page .rz-inputtext:focus,
+                    .login-page .rz-textbox:focus,
+                    .login-page .rz-password input:focus {
+                        border-color: #3b82f6 !important;
+                        background-color: #ffffff !important;
+                    }
+
+            .login-page .rz-messages-error {
+                margin-top: 0.1rem;
+                font-size: 0.85rem;
+            }
+
+            .login-page .remember-row {
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                padding-top: 0.25rem;
+                color: #475569;
+            }
+
+            .login-page .login-button {
+                width: 100%;
+                height: 50px;
+                border-radius: 14px;
+                font-size: 1rem;
+                font-weight: 700;
+                margin-top: 0.25rem;
+            }
 
 
-</style>
+    </style>
 
-@code {
-    private LoginInputModel loginModel = new();
-    private string? ErrorMessage;
+    @code {
+        private LoginInputModel loginModel = new();
+        private string? ErrorMessage;
 
-    [Inject]
-    private NavigationManager Navigation { get; set; } = default!;
+        [Inject]
+        private NavigationManager Navigation { get; set; } = default!;
 
-    protected override void OnInitialized()
-    {
-        var uri = new Uri(Navigation.Uri);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-
-        if (query.TryGetValue("error", out var error))
+        protected override void OnInitialized()
         {
-            ErrorMessage = error.ToString();
+            var uri = new Uri(Navigation.Uri);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+            if (query.TryGetValue("error", out var error))
+            {
+                ErrorMessage = error.ToString();
+            }
+        }
+
+        private void HandleSubmit(LoginInputModel _)
+        {
+            var rememberMe = loginModel.RememberMe ? "true" : "false";
+            var email = Uri.EscapeDataString(loginModel.Email ?? string.Empty);
+            var password = Uri.EscapeDataString(loginModel.Password ?? string.Empty);
+
+            Navigation.NavigateTo($"/account/do-login?email={email}&password={password}&rememberMe={rememberMe}", forceLoad: true);
         }
     }
-
-    private void HandleSubmit(LoginInputModel _)
-    {
-        var rememberMe = loginModel.RememberMe ? "true" : "false";
-        var email = Uri.EscapeDataString(loginModel.Email ?? string.Empty);
-        var password = Uri.EscapeDataString(loginModel.Password ?? string.Empty);
-
-        Navigation.NavigateTo($"/account/do-login?email={email}&password={password}&rememberMe={rememberMe}", forceLoad: true);
-    }
-}

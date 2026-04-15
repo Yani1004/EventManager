@@ -3,12 +3,11 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
 @using EventManager.Models
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
+@using EventManager.Services.Interfaces
 @using Radzen
 @using Radzen.Blazor
 
-@inject UserManager<ApplicationUser> UserManager
+@inject IAdminService AdminService
 @inject NavigationManager NavigationManager
 
 <PageTitle>All Users</PageTitle>
@@ -43,6 +42,7 @@
                                   ButtonStyle="ButtonStyle.Secondary"
                                   Variant="Variant.Outlined"
                                   Size="ButtonSize.Large"
+                                  class="dashboard-back-btn"
                                   Click="@(() => NavigationManager.NavigateTo("/admin"))" />
                 </RadzenStack>
             </RadzenColumn>
@@ -130,7 +130,7 @@
                 </RadzenStack>
 
                 <RadzenDataGrid Data="@users"
-                                TItem="UserListItemViewModel"
+                                TItem="UserListItem"
                                 AllowPaging="true"
                                 PageSize="10"
                                 AllowSorting="true"
@@ -140,13 +140,13 @@
                                 class="users-grid">
 
                     <Columns>
-                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="#" Width="70px" Sortable="false">
+                        <RadzenDataGridColumn TItem="UserListItem" Title="#" Width="70px" Sortable="false">
                             <Template Context="user">
                                 @(users.IndexOf(user) + 1)
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="UserListItemViewModel" Property="FullName" Title="Name" Width="250px">
+                        <RadzenDataGridColumn TItem="UserListItem" Property="FullName" Title="Name" Width="250px">
                             <Template Context="user">
                                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
                                     <div class="user-avatar">
@@ -160,7 +160,7 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Requested Role" Width="160px" Sortable="false">
+                        <RadzenDataGridColumn TItem="UserListItem" Title="Requested Role" Width="160px" Sortable="false">
                             <Template Context="user">
                                 <RadzenBadge Text="@GetRequestedRoleText(user)"
                                              BadgeStyle="@GetRequestedRoleBadgeStyle(user)"
@@ -169,7 +169,7 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Status" Width="150px" Sortable="false">
+                        <RadzenDataGridColumn TItem="UserListItem" Title="Status" Width="150px" Sortable="false">
                             <Template Context="user">
                                 <RadzenBadge Text="@GetStatusText(user)"
                                              BadgeStyle="@GetStatusBadgeStyle(user)"
@@ -178,7 +178,7 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Current Role" Width="160px" Sortable="false">
+                        <RadzenDataGridColumn TItem="UserListItem" Title="Current Role" Width="160px" Sortable="false">
                             <Template Context="user">
                                 <RadzenBadge Text="@user.CurrentRole"
                                              BadgeStyle="@GetCurrentRoleBadgeStyle(user.CurrentRole)"
@@ -225,6 +225,13 @@
         font-size: 1.8rem;
         box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
         flex-shrink: 0;
+    }
+
+    .dashboard-back-btn {
+        min-height: 48px;
+        padding: 0 1.15rem;
+        border-radius: 14px !important;
+        font-weight: 600;
     }
 
     .users-subtitle {
@@ -312,12 +319,10 @@
     .users-grid .rz-datatable-data tr:hover {
         background: #f8fbff !important;
     }
-
-
 </style>
 
 @code {
-    private List<UserListItemViewModel> users = new();
+    private List<UserListItem> users = new();
     private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -328,28 +333,7 @@
     private async Task LoadUsers()
     {
         isLoading = true;
-        users.Clear();
-
-        var allUsers = await UserManager.Users
-            .OrderBy(u => u.FirstName)
-            .ThenBy(u => u.LastName)
-            .ToListAsync();
-
-        foreach (var user in allUsers)
-        {
-            var roles = await UserManager.GetRolesAsync(user);
-
-            users.Add(new UserListItemViewModel
-            {
-                Id = user.Id,
-                FullName = $"{user.FirstName} {user.LastName}".Trim(),
-                Email = user.Email ?? "",
-                RequestedRole = user.RequestedRole,
-                IsApproved = user.IsApproved,
-                CurrentRole = roles.FirstOrDefault() ?? "No Role"
-            });
-        }
-
+        users = await AdminService.GetAllUsersAsync();
         isLoading = false;
     }
 
@@ -366,7 +350,7 @@
         return string.Concat(parts);
     }
 
-    private string GetRequestedRoleText(UserListItemViewModel user)
+    private string GetRequestedRoleText(UserListItem user)
     {
         if (string.IsNullOrWhiteSpace(user.RequestedRole) || user.RequestedRole == "Attendee")
             return "None";
@@ -374,7 +358,7 @@
         return user.RequestedRole;
     }
 
-    private BadgeStyle GetRequestedRoleBadgeStyle(UserListItemViewModel user)
+    private BadgeStyle GetRequestedRoleBadgeStyle(UserListItem user)
     {
         if (string.IsNullOrWhiteSpace(user.RequestedRole) || user.RequestedRole == "Attendee")
             return BadgeStyle.Secondary;
@@ -387,7 +371,7 @@
         };
     }
 
-    private string GetStatusText(UserListItemViewModel user)
+    private string GetStatusText(UserListItem user)
     {
         if (user.RequestedRole == "EventManager" && !user.IsApproved)
             return "Pending";
@@ -401,7 +385,7 @@
         return "Attendee";
     }
 
-    private BadgeStyle GetStatusBadgeStyle(UserListItemViewModel user)
+    private BadgeStyle GetStatusBadgeStyle(UserListItem user)
     {
         if (user.RequestedRole == "EventManager" && !user.IsApproved)
             return BadgeStyle.Warning;
@@ -422,14 +406,4 @@
         "Attendee" => BadgeStyle.Secondary,
         _ => BadgeStyle.Secondary
     };
-
-    public class UserListItemViewModel
-    {
-        public string Id { get; set; } = "";
-        public string FullName { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string? RequestedRole { get; set; }
-        public bool IsApproved { get; set; }
-        public string CurrentRole { get; set; } = "";
-    }
-}
+}   

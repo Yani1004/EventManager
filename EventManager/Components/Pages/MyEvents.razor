@@ -3,14 +3,13 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -77,7 +76,7 @@
         {
             <RadzenCard class="grid-card">
                 <RadzenDataGrid Data="@myEvents"
-                                TItem="Event"
+                                TItem="MyEventListItem"
                                 AllowPaging="true"
                                 PageSize="8"
                                 AllowSorting="true"
@@ -85,7 +84,7 @@
                                 class="events-grid">
 
                     <Columns>
-                        <RadzenDataGridColumn TItem="Event" Title="Event">
+                        <RadzenDataGridColumn TItem="MyEventListItem" Title="Event">
                             <Template Context="ev">
                                 <RadzenStack Gap="0.35rem">
                                     <RadzenText TextStyle="TextStyle.Body1" class="event-title text-wrap">
@@ -107,7 +106,7 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="Event" Title="Details" TextAlign="TextAlign.Center">
+                        <RadzenDataGridColumn TItem="MyEventListItem" Title="Details" TextAlign="TextAlign.Center">
                             <Template Context="ev">
                                 <RadzenStack Gap="0.35rem" class="centered-stack">
                                     <RadzenText TextStyle="TextStyle.Body2">
@@ -115,7 +114,7 @@
                                     </RadzenText>
 
                                     <RadzenText TextStyle="TextStyle.Body2">
-                                        <strong>Registered:</strong> @ev.Registrations.Count / @ev.Capacity
+                                        <strong>Registered:</strong> @ev.RegisteredCount / @ev.Capacity
                                     </RadzenText>
 
                                     <RadzenBadge Text="@(ev.Price == 0 ? "Free" : $"{ev.Price:F2} lv.")"
@@ -126,29 +125,16 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="Event" Title="Status">
+                        <RadzenDataGridColumn TItem="MyEventListItem" Title="Status">
                             <Template Context="ev">
                                 <RadzenStack Gap="0.5rem">
                                     <RadzenBadge Text="@GetStatusLabel(ev.Status)"
                                                  class="@GetStatusBadgeClass(ev.Status)" />
-
-                                    @if (ev.Status == "Flagged" && !string.IsNullOrWhiteSpace(ev.AdminNote))
-                                    {
-                                        <RadzenText TextStyle="TextStyle.Caption" class="admin-note-text text-wrap">
-                                            @ev.AdminNote
-                                        </RadzenText>
-                                    }
-                                    else
-                                    {
-                                        <RadzenText TextStyle="TextStyle.Caption" class="muted-text">
-                                            No admin note
-                                        </RadzenText>
-                                    }
                                 </RadzenStack>
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="Event" Title="Actions" Sortable="false" Filterable="false">
+                        <RadzenDataGridColumn TItem="MyEventListItem" Title="Actions" Sortable="false" Filterable="false">
                             <Template Context="ev">
                                 <RadzenStack Gap="0.5rem" class="actions-column">
                                     <RadzenButton Icon="visibility"
@@ -266,30 +252,30 @@
         overflow: hidden;
     }
 
-        .events-grid .rz-datatable-table {
-            width: 100%;
-            table-layout: fixed;
-        }
+    .events-grid .rz-datatable-table {
+        width: 100%;
+        table-layout: fixed;
+    }
 
-        .events-grid .rz-datatable-thead th {
-            font-weight: 700;
-            color: #334155;
-            background: #f8fafc;
-            border-bottom: 0.0625rem solid #e2e8f0;
-            padding: 0.85rem 0.75rem;
-            white-space: normal;
-        }
+    .events-grid .rz-datatable-thead th {
+        font-weight: 700;
+        color: #334155;
+        background: #f8fafc;
+        border-bottom: 0.0625rem solid #e2e8f0;
+        padding: 0.85rem 0.75rem;
+        white-space: normal;
+    }
 
-        .events-grid .rz-data-row td {
-            padding: 0.85rem 0.75rem;
-            border-bottom: 0.0625rem solid #eef2f7;
-            vertical-align: top;
-            white-space: normal;
-        }
+    .events-grid .rz-data-row td {
+        padding: 0.85rem 0.75rem;
+        border-bottom: 0.0625rem solid #eef2f7;
+        vertical-align: top;
+        white-space: normal;
+    }
 
-        .events-grid .rz-cell-data {
-            white-space: normal;
-        }
+    .events-grid .rz-cell-data {
+        white-space: normal;
+    }
 
     .event-title {
         font-weight: 700;
@@ -312,11 +298,6 @@
 
     .price-badge {
         font-weight: 700;
-    }
-
-    .admin-note-text {
-        color: #7c2d12;
-        font-weight: 500;
     }
 
     .actions-column {
@@ -367,11 +348,10 @@
         font-weight: 700;
         padding: 0.35rem 0.8rem;
     }
-
 </style>
 
 @code {
-    private List<Event> myEvents = new();
+    private List<MyEventListItem> myEvents = new();
     private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -382,7 +362,7 @@
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            myEvents = await Db.Events.Include(e => e.Registrations).Where(e => e.CreatorId == userId).OrderByDescending(e => e.Date).ToListAsync();
+            myEvents = await EventService.GetMyEventsAsync(userId);
         }
 
         isLoading = false;

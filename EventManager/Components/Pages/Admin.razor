@@ -2,16 +2,12 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
-@using EventManager.Data
 @using EventManager.Models
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
+@using EventManager.Services.Interfaces
 @using Radzen
 @using Radzen.Blazor
 
-@inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
-@inject ApplicationDbContext Db
+@inject IAdminService AdminService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Admin Dashboard</PageTitle>
@@ -45,17 +41,17 @@
         background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.16), transparent 34%), linear-gradient(135deg, #ffffff 0%, #f8fbff 50%, #f6f8ff 100%) !important;
     }
 
-        .hero-card::before {
-            content: "";
-            position: absolute;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            background: rgba(59, 130, 246, 0.08);
-            top: -90px;
-            right: -70px;
-            filter: blur(8px);
-        }
+    .hero-card::before {
+        content: "";
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.08);
+        top: -90px;
+        right: -70px;
+        filter: blur(8px);
+    }
 
     .hero-icon-wrap {
         width: 74px;
@@ -69,10 +65,10 @@
         box-shadow: 0 14px 30px rgba(59, 130, 246, 0.28);
     }
 
-        .hero-icon-wrap .rzi {
-            font-size: 2rem;
-            color: white;
-        }
+    .hero-icon-wrap .rzi {
+        font-size: 2rem;
+        color: white;
+    }
 
     .hero-title {
         margin: 0;
@@ -104,51 +100,50 @@
         width: fit-content;
     }
 
-        .hero-chip .rzi {
-            font-size: 1rem;
-        }
+    .hero-chip .rzi {
+        font-size: 1rem;
+    }
 
     .stat-card {
         height: 100%;
-        /* padding: 0.35rem; */
         transition: transform 0.22s ease, box-shadow 0.22s ease;
         overflow: hidden;
         position: relative;
     }
 
-        .stat-card:hover,
-        .section-card:hover,
-        .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.09), 0 6px 18px rgba(15, 23, 42, 0.06) !important;
-        }
+    .stat-card:hover,
+    .section-card:hover,
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.09), 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+    }
 
-        .stat-card::after {
-            content: "";
-            position: absolute;
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            right: -35px;
-            top: -35px;
-            opacity: 0.18;
-        }
+    .stat-card::after {
+        content: "";
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        right: -35px;
+        top: -35px;
+        opacity: 0.18;
+    }
 
-        .stat-card.users::after {
-            background: #3b82f6;
-        }
+    .stat-card.users::after {
+        background: #3b82f6;
+    }
 
-        .stat-card.managers::after {
-            background: #10b981;
-        }
+    .stat-card.managers::after {
+        background: #10b981;
+    }
 
-        .stat-card.pending::after {
-            background: #f59e0b;
-        }
+    .stat-card.pending::after {
+        background: #f59e0b;
+    }
 
-        .stat-card.events::after {
-            background: #8b5cf6;
-        }
+    .stat-card.events::after {
+        background: #8b5cf6;
+    }
 
     .stat-icon {
         width: 58px;
@@ -160,26 +155,26 @@
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
     }
 
-        .stat-icon .rzi {
-            font-size: 1.5rem;
-            color: #fff;
-        }
+    .stat-icon .rzi {
+        font-size: 1.5rem;
+        color: #fff;
+    }
 
-        .stat-icon.users {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
+    .stat-icon.users {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
 
-        .stat-icon.managers {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
+    .stat-icon.managers {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
 
-        .stat-icon.pending {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
+    .stat-icon.pending {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
 
-        .stat-icon.events {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-        }
+    .stat-icon.events {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
 
     .stat-label {
         margin: 0;
@@ -204,7 +199,6 @@
     }
 
     .section-card {
-        /* padding: 0.35rem; */
         height: 100%;
         transition: transform 0.22s ease, box-shadow 0.22s ease;
     }
@@ -277,10 +271,10 @@
         background: linear-gradient(135deg, rgba(59,130,246,0.16), rgba(99,102,241,0.16));
     }
 
-        .action-icon .rzi {
-            font-size: 1.35rem;
-            color: #3b82f6;
-        }
+    .action-icon .rzi {
+        font-size: 1.35rem;
+        color: #3b82f6;
+    }
 
     .action-title {
         margin: 0;
@@ -651,30 +645,13 @@
     {
         isLoading = true;
 
-        totalUsers = await UserManager.Users.CountAsync();
+        var dashboardData = await AdminService.GetDashboardDataAsync();
 
-        pendingApprovals = await UserManager.Users
-            .CountAsync(u => u.RequestedRole == "EventManager" && !u.IsApproved);
-
-        totalEvents = await Db.Events.CountAsync();
-
-        totalEventManagers = 0;
-        var users = await UserManager.Users.ToListAsync();
-
-        foreach (var user in users)
-        {
-            if (await UserManager.IsInRoleAsync(user, "EventManager"))
-            {
-                totalEventManagers++;
-            }
-        }
-
-        recentPendingUsers = await UserManager.Users
-            .Where(u => u.RequestedRole == "EventManager" && !u.IsApproved)
-            .OrderBy(u => u.FirstName)
-            .ThenBy(u => u.LastName)
-            .Take(5)
-            .ToListAsync();
+        totalUsers = dashboardData.TotalUsers;
+        totalEventManagers = dashboardData.TotalEventManagers;
+        pendingApprovals = dashboardData.PendingApprovals;
+        totalEvents = dashboardData.TotalEvents;
+        recentPendingUsers = dashboardData.RecentPendingUsers;
 
         isLoading = false;
     }

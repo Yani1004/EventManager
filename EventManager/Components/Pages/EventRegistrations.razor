@@ -3,17 +3,15 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
+@inject IRegistrationService RegistrationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 
 <PageTitle>Event Registrations</PageTitle>
@@ -181,14 +179,14 @@
                         </RadzenStack>
 
                         <RadzenDataGrid Data="@registrations"
-                                        TItem="RegistrationViewModel"
+                                        TItem="EventRegistrationListItem"
                                         AllowPaging="true"
                                         PageSize="10"
                                         AllowSorting="true"
                                         AllowFiltering="false"
                                         class="registrations-grid">
                             <Columns>
-                                <RadzenDataGridColumn TItem="RegistrationViewModel" Title="#" Width="4.5rem" Sortable="false" TextAlign="TextAlign.Center">
+                                <RadzenDataGridColumn TItem="EventRegistrationListItem" Title="#" Width="4.5rem" Sortable="false" TextAlign="TextAlign.Center">
                                     <Template Context="item">
                                         <RadzenText TextStyle="TextStyle.Body2" class="index-text">
                                             @(registrations.IndexOf(item) + 1)
@@ -196,7 +194,7 @@
                                     </Template>
                                 </RadzenDataGridColumn>
 
-                                <RadzenDataGridColumn TItem="RegistrationViewModel" Property="UserName" Title="Username" Width="12rem">
+                                <RadzenDataGridColumn TItem="EventRegistrationListItem" Property="UserName" Title="Username" Width="12rem">
                                     <Template Context="item">
                                         <RadzenText TextStyle="TextStyle.Body2" class="grid-main-text">
                                             @item.UserName
@@ -204,7 +202,7 @@
                                     </Template>
                                 </RadzenDataGridColumn>
 
-                                <RadzenDataGridColumn TItem="RegistrationViewModel" Property="FullName" Title="Full Name" Width="14rem">
+                                <RadzenDataGridColumn TItem="EventRegistrationListItem" Property="FullName" Title="Full Name" Width="14rem">
                                     <Template Context="item">
                                         <RadzenText TextStyle="TextStyle.Body2" class="grid-main-text">
                                             @(string.IsNullOrWhiteSpace(item.FullName) ? "—" : item.FullName)
@@ -212,7 +210,7 @@
                                     </Template>
                                 </RadzenDataGridColumn>
 
-                                <RadzenDataGridColumn TItem="RegistrationViewModel" Property="Email" Title="Email" Width="16rem">
+                                <RadzenDataGridColumn TItem="EventRegistrationListItem" Property="Email" Title="Email" Width="16rem">
                                     <Template Context="item">
                                         <RadzenText TextStyle="TextStyle.Body2" class="grid-sub-text email-wrap">
                                             @item.Email
@@ -220,7 +218,7 @@
                                     </Template>
                                 </RadzenDataGridColumn>
 
-                                <RadzenDataGridColumn TItem="RegistrationViewModel" Property="RegisteredAt" Title="Registered At" Width="12rem">
+                                <RadzenDataGridColumn TItem="EventRegistrationListItem" Property="RegisteredAt" Title="Registered At" Width="12rem">
                                     <Template Context="item">
                                         <RadzenText TextStyle="TextStyle.Body2" class="grid-sub-text">
                                             @item.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
@@ -401,7 +399,7 @@
     private Event? eventItem;
     private bool isLoading = true;
 
-    private List<RegistrationViewModel> registrations = new();
+    private List<EventRegistrationListItem> registrations = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -415,44 +413,16 @@
             return;
         }
 
-        eventItem = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
+        eventItem = await EventService.GetOwnedEventByIdAsync(Id, userId);
 
-        if (eventItem == null || eventItem.CreatorId != userId)
+        if (eventItem == null)
         {
-            eventItem = null;
             isLoading = false;
             return;
         }
 
-        var eventRegistrations = await Db.Registrations
-            .Where(r => r.EventId == Id)
-            .OrderByDescending(r => r.RegisteredAt)
-            .ToListAsync();
-
-        foreach (var registration in eventRegistrations)
-        {
-            var registeredUser = await UserManager.FindByIdAsync(registration.UserId);
-
-            if (registeredUser != null)
-            {
-                registrations.Add(new RegistrationViewModel
-                {
-                    UserName = registeredUser.UserName ?? "",
-                    FullName = $"{registeredUser.FirstName} {registeredUser.LastName}".Trim(),
-                    Email = registeredUser.Email ?? "",
-                    RegisteredAt = registration.RegisteredAt
-                });
-            }
-        }
+        registrations = await RegistrationService.GetEventRegistrationsForOwnerAsync(Id, userId);
 
         isLoading = false;
-    }
-
-    private class RegistrationViewModel
-    {
-        public string UserName { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public DateTime RegisteredAt { get; set; }
     }
 }

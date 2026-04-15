@@ -1,17 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿    using System.ComponentModel.DataAnnotations;
 
-namespace EventManager.Models
-{
-    public class LoginInputModel
+    namespace EventManager.Models
     {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        public class LoginInputModel
+        {
+            [Required]
+            [EmailAddress]
+            public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
+            [Required]
+            [DataType(DataType.Password)]
+            public string Password { get; set; } = string.Empty;
 
-        public bool RememberMe { get; set; }
+            public bool RememberMe { get; set; }
+        }
     }
-}

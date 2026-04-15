@@ -2,14 +2,14 @@
 @rendermode InteractiveServer
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
+@inject IRegistrationService RegistrationService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
@@ -565,7 +565,7 @@
             isAdmin = user.IsInRole("Admin");
         }
 
-        eventItem = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
+        eventItem = await EventService.GetEventByIdAsync(Id);
 
         if (eventItem == null)
         {
@@ -585,7 +585,7 @@
             return;
         }
 
-        registeredCount = await Db.Registrations.CountAsync(r => r.EventId == eventItem.Id);
+        registeredCount = await RegistrationService.GetRegisteredCountAsync(eventItem.Id);
 
         if (user.Identity?.IsAuthenticated == true)
         {
@@ -593,8 +593,7 @@
             {
                 canRegister = true;
 
-                var existingRegistration = await Db.Registrations
-                    .FirstOrDefaultAsync(r => r.EventId == eventItem.Id && r.UserId == currentUserId);
+                var existingRegistration = await RegistrationService.GetUserRegistrationAsync(eventItem.Id, currentUserId);
 
                 if (existingRegistration != null)
                 {
@@ -644,13 +643,6 @@
                 return;
             }
 
-            if (eventItem.Status != "Active")
-            {
-                message = "This event is currently not available for registration.";
-                messageStyle = AlertStyle.Warning;
-                return;
-            }
-
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrWhiteSpace(userId))
@@ -660,41 +652,25 @@
                 return;
             }
 
-            var alreadyRegistered = await Db.Registrations
-                .AnyAsync(r => r.EventId == eventItem.Id && r.UserId == userId);
+            var result = await RegistrationService.RegisterForEventAsync(eventItem.Id, userId);
 
-            if (alreadyRegistered)
+            if (!result.Success)
             {
-                message = "You are already registered for this event.";
+                message = result.Message;
                 messageStyle = AlertStyle.Warning;
                 return;
             }
 
-            var currentCount = await Db.Registrations
-                .CountAsync(r => r.EventId == eventItem.Id);
+            registeredCount = await RegistrationService.GetRegisteredCountAsync(eventItem.Id);
 
-            if (currentCount >= eventItem.Capacity)
+            var registration = await RegistrationService.GetUserRegistrationAsync(eventItem.Id, userId);
+            if (registration != null)
             {
-                message = "This event is already full.";
-                messageStyle = AlertStyle.Danger;
-                return;
+                isAlreadyRegistered = true;
+                currentRegistrationId = registration.Id;
             }
 
-            var registration = new Registration
-            {
-                EventId = eventItem.Id,
-                UserId = userId,
-                RegisteredAt = DateTime.UtcNow
-            };
-
-            Db.Registrations.Add(registration);
-            await Db.SaveChangesAsync();
-
-            registeredCount++;
-            isAlreadyRegistered = true;
-            currentRegistrationId = registration.Id;
-
-            message = "You successfully registered for the event.";
+            message = result.Message;
             messageStyle = AlertStyle.Success;
         }
         catch
@@ -713,24 +689,31 @@
         if (currentRegistrationId == null || eventItem == null)
             return;
 
-        var registration = await Db.Registrations
-            .FirstOrDefaultAsync(r => r.Id == currentRegistrationId.Value);
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        if (registration == null)
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            message = "Registration not found.";
+            message = "Could not identify the current user.";
             messageStyle = AlertStyle.Danger;
             return;
         }
 
-        Db.Registrations.Remove(registration);
-        await Db.SaveChangesAsync();
+        var result = await RegistrationService.CancelRegistrationAsync(currentRegistrationId.Value, userId);
+
+        if (!result.Success)
+        {
+            message = result.Message;
+            messageStyle = AlertStyle.Danger;
+            return;
+        }
 
         isAlreadyRegistered = false;
         currentRegistrationId = null;
-        registeredCount--;
+        registeredCount = await RegistrationService.GetRegisteredCountAsync(eventItem.Id);
 
-        message = "Registration cancelled successfully.";
+        message = result.Message;
         messageStyle = AlertStyle.Success;
     }
 

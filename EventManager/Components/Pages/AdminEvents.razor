@@ -2,15 +2,12 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
-@using EventManager.Data
 @using EventManager.Models
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
+@using EventManager.Services.Interfaces
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
-@inject UserManager<ApplicationUser> UserManager
+@inject IAdminService AdminService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Manage Events</PageTitle>
@@ -207,7 +204,7 @@
 
         <RadzenCard class="grid-shell">
             <RadzenDataGrid Data="@FilteredEvents"
-                            TItem="Event"
+                            TItem="AdminEventListItem"
                             AllowPaging="true"
                             PageSize="8"
                             PagerHorizontalAlign="HorizontalAlign.Right"
@@ -215,7 +212,7 @@
                             class="admin-events-grid">
 
                 <Columns>
-                    <RadzenDataGridColumn TItem="Event" Title="Event">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Event">
                         <Template Context="ev">
                             <RadzenStack Gap="0.35rem">
                                 <RadzenText TextStyle="TextStyle.Body1" class="event-name">
@@ -241,7 +238,7 @@
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="Event" Title="Category">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Category">
                         <Template Context="ev">
                             <RadzenBadge Text="@ev.Category"
                                          Variant="Variant.Flat"
@@ -250,13 +247,13 @@
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="Event" Title="Created By">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Created By">
                         <Template Context="ev">
-                            <RadzenText TextStyle="TextStyle.Body2">@GetCreatorName(ev.CreatorId)</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body2">@ev.CreatorName</RadzenText>
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="Event" Title="Status">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Status">
                         <Template Context="ev">
                             <span class="@GetStatusPillClass(ev.Status)">
                                 @GetStatusLabel(ev.Status)
@@ -264,7 +261,7 @@
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="Event" Title="Admin Note">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Admin Note">
                         <Template Context="ev">
                             <RadzenStack Gap="0.45rem">
                                 <RadzenTextBox Value="@GetAdminNoteValue(ev.Id)"
@@ -283,7 +280,7 @@
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="Event" Title="Actions">
+                    <RadzenDataGridColumn TItem="AdminEventListItem" Title="Actions">
                         <Template Context="ev">
                             <RadzenWrap Gap="1rem">
                                 <RadzenButton Icon="visibility"
@@ -584,13 +581,10 @@
         font-size: 2.3rem;
         color: #2563eb;
     }
-
-  
 </style>
 
 @code {
-    private List<Event> events = new();
-    private Dictionary<string, string> creatorNames = new();
+    private List<AdminEventListItem> events = new();
     private Dictionary<int, string> adminNotes = new();
 
     private bool isLoading = true;
@@ -629,49 +623,22 @@
     {
         isLoading = true;
 
-        events = await Db.Events
-            .OrderBy(e => e.Date)
-            .ToListAsync();
+        events = await AdminService.GetAllEventsForAdminAsync();
 
-        creatorNames.Clear();
         adminNotes.Clear();
-
         foreach (var ev in events)
         {
             adminNotes[ev.Id] = ev.AdminNote ?? string.Empty;
         }
 
-        var creatorIds = events
-            .Where(e => !string.IsNullOrWhiteSpace(e.CreatorId))
-            .Select(e => e.CreatorId)
-            .Distinct()
-            .ToList();
-
-        foreach (var creatorId in creatorIds)
-        {
-            var user = await UserManager.FindByIdAsync(creatorId!);
-
-            if (user != null)
-            {
-                var fullName = $"{user.FirstName} {user.LastName}".Trim();
-                creatorNames[creatorId!] = string.IsNullOrWhiteSpace(fullName)
-                    ? user.Email ?? "Unknown"
-                    : fullName;
-            }
-            else
-            {
-                creatorNames[creatorId!] = "Unknown";
-            }
-        }
-
         isLoading = false;
     }
 
-    private List<Event> FilteredEvents
+    private List<AdminEventListItem> FilteredEvents
     {
         get
         {
-            IEnumerable<Event> query = events;
+            IEnumerable<AdminEventListItem> query = events;
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -713,38 +680,20 @@
         isProcessing = true;
         ClearMessage();
 
-        var ev = await Db.Events.FindAsync(eventId);
-
-        if (ev == null)
-        {
-            ShowError("Event not found.");
-            isProcessing = false;
-            return;
-        }
-
         var note = adminNotes.TryGetValue(eventId, out var value)
-            ? value?.Trim()
+            ? value?.Trim() ?? string.Empty
             : string.Empty;
 
-        if (string.IsNullOrWhiteSpace(note))
-        {
-            ShowError("Please write an admin note before flagging the event.");
-            isProcessing = false;
-            return;
-        }
+        var result = await AdminService.FlagEventAsync(eventId, note);
 
-        ev.Status = "Flagged";
-        ev.AdminNote = note;
-
-        try
+        if (result.Success)
         {
-            await Db.SaveChangesAsync();
-            ShowSuccess($"Event \"{ev.Title}\" was flagged successfully.");
+            ShowSuccess(result.Message);
             await LoadEvents();
         }
-        catch (Exception ex)
+        else
         {
-            ShowError($"Could not flag event. {ex.Message}");
+            ShowError(result.Message);
         }
 
         isProcessing = false;
@@ -755,44 +704,20 @@
         isProcessing = true;
         ClearMessage();
 
-        var ev = await Db.Events.FindAsync(eventId);
-
-        if (ev == null)
-        {
-            ShowError("Event not found.");
-            isProcessing = false;
-            return;
-        }
-
-        if (ev.Status != "Flagged")
-        {
-            ShowError("Only flagged events can update the saved admin note.");
-            isProcessing = false;
-            return;
-        }
-
         var note = adminNotes.TryGetValue(eventId, out var value)
-            ? value?.Trim()
+            ? value?.Trim() ?? string.Empty
             : string.Empty;
 
-        if (string.IsNullOrWhiteSpace(note))
-        {
-            ShowError("Please write an admin note.");
-            isProcessing = false;
-            return;
-        }
+        var result = await AdminService.UpdateFlaggedNoteAsync(eventId, note);
 
-        ev.AdminNote = note;
-
-        try
+        if (result.Success)
         {
-            await Db.SaveChangesAsync();
-            ShowSuccess($"Admin note updated for \"{ev.Title}\".");
+            ShowSuccess(result.Message);
             await LoadEvents();
         }
-        catch (Exception ex)
+        else
         {
-            ShowError($"Could not update admin note. {ex.Message}");
+            ShowError(result.Message);
         }
 
         isProcessing = false;
@@ -803,45 +728,24 @@
         isProcessing = true;
         ClearMessage();
 
-        var ev = await Db.Events.FindAsync(eventId);
+        var result = await AdminService.UpdateEventStatusAsync(eventId, newStatus);
 
-        if (ev == null)
+        if (result.Success)
         {
-            ShowError("Event not found.");
-            isProcessing = false;
-            return;
-        }
+            if (newStatus != "Flagged")
+            {
+                adminNotes[eventId] = string.Empty;
+            }
 
-        ev.Status = newStatus;
-
-        if (newStatus != "Flagged")
-        {
-            ev.AdminNote = null;
-            adminNotes[eventId] = string.Empty;
-        }
-
-        try
-        {
-            await Db.SaveChangesAsync();
-            ShowSuccess($"Event \"{ev.Title}\" updated to {GetStatusLabel(newStatus)}.");
+            ShowSuccess(result.Message);
             await LoadEvents();
         }
-        catch (Exception ex)
+        else
         {
-            ShowError($"Could not update event. {ex.Message}");
+            ShowError(result.Message);
         }
 
         isProcessing = false;
-    }
-
-    private string GetCreatorName(string? creatorId)
-    {
-        if (string.IsNullOrWhiteSpace(creatorId))
-            return "Unknown";
-
-        return creatorNames.TryGetValue(creatorId, out var name)
-            ? name
-            : "Unknown";
     }
 
     private string GetStatusLabel(string status) => status switch

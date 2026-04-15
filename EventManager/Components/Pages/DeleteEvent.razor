@@ -3,12 +3,11 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "EventManager")]
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -27,11 +26,20 @@
     }
     else
     {
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mb-3">
+                @message
+            </div>
+        }
+
         <div class="alert alert-danger">
             Are you sure you want to delete <strong>@eventItem.Title</strong>?
         </div>
 
-        <button class="btn btn-danger" @onclick="DeleteConfirmed">Yes, Delete</button>
+        <button class="btn btn-danger" @onclick="DeleteConfirmed" disabled="@isDeleting">
+            @(isDeleting ? "Deleting..." : "Yes, Delete")
+        </button>
         <a class="btn btn-secondary ms-2" href="/my-events">Cancel</a>
     }
 </div>
@@ -42,6 +50,9 @@
 
     private Event? eventItem;
     private bool isLoading = true;
+    private bool isDeleting = false;
+    private string message = string.Empty;
+    private bool isSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,11 +60,9 @@
         var user = authState.User;
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        eventItem = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
-
-        if (eventItem == null || eventItem.CreatorId != userId)
+        if (!string.IsNullOrWhiteSpace(userId))
         {
-            eventItem = null;
+            eventItem = await EventService.GetOwnedEventByIdAsync(Id, userId);
         }
 
         isLoading = false;
@@ -61,11 +70,42 @@
 
     private async Task DeleteConfirmed()
     {
-        if (eventItem == null)
+        if (eventItem == null || isDeleting)
             return;
 
-        Db.Events.Remove(eventItem);
-        await Db.SaveChangesAsync();
-        NavigationManager.NavigateTo("/my-events");
+        isDeleting = true;
+        message = string.Empty;
+        isSuccess = false;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                message = "Could not identify the current user.";
+                return;
+            }
+
+            var result = await EventService.DeleteEventAsync(Id, userId);
+
+            if (!result.Success)
+            {
+                message = result.Message;
+                return;
+            }
+
+            isSuccess = true;
+            message = result.Message;
+
+            await Task.Delay(400);
+            NavigationManager.NavigateTo("/my-events");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
     }
 }

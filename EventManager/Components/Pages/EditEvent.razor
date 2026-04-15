@@ -6,12 +6,11 @@
 @using System.Security.Claims
 @using Radzen
 @using Radzen.Blazor
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -753,27 +752,29 @@
         var user = authState.User;
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        var existingEvent = await Db.Events.FirstOrDefaultAsync(e => e.Id == Id);
-
-        if (existingEvent == null || string.IsNullOrWhiteSpace(userId) || existingEvent.CreatorId != userId)
+        if (string.IsNullOrWhiteSpace(userId))
         {
             eventModel = null;
             isLoading = false;
             return;
         }
 
-        eventModel = existingEvent;
+        eventModel = await EventService.GetOwnedEventByIdAsync(Id, userId);
 
-        var localDateTime = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
-        eventDateOnly = localDateTime.Date;
-        selectedTime = localDateTime.ToString("HH:mm");
-
-        if (!timeOptions.Any(t => t.Value == selectedTime))
+        if (eventModel != null)
         {
-            selectedTime = "18:00";
+            var localDateTime = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
+            eventDateOnly = localDateTime.Date;
+            selectedTime = localDateTime.ToString("HH:mm");
+
+            if (!timeOptions.Any(t => t.Value == selectedTime))
+            {
+                selectedTime = "18:00";
+            }
+
+            UpdateMapUrl();
         }
 
-        UpdateMapUrl();
         isLoading = false;
     }
 
@@ -803,7 +804,7 @@
         }
     }
 
-    private async Task HandleEditEvent()
+    private async Task HandleEditEvent(Event _)
     {
         if (eventModel == null || isSubmitting)
             return;
@@ -815,29 +816,43 @@
 
         try
         {
-            eventModel.Date = CombineDateAndTime(eventDateOnly, selectedTime);
+            var selectedDateTime = CombineDateAndTime(eventDateOnly, selectedTime);
 
-            if (eventModel.Date <= DateTime.Now)
+            if (selectedDateTime <= DateTime.Now)
             {
                 dateValidationMessage = "Event date and time must be in the future.";
                 alertStyle = AlertStyle.Danger;
                 return;
             }
 
-            UpdateMapUrl();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var localEventDate = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Local);
-            eventModel.Date = localEventDate.ToUniversalTime();
-
-            if (eventModel.Status == "Flagged")
+            if (string.IsNullOrWhiteSpace(userId))
             {
-                eventModel.Status = "PendingReview";
-                eventModel.AdminNote = null;
+                message = "Could not identify the current user.";
+                alertStyle = AlertStyle.Danger;
+                return;
             }
 
-            await Db.SaveChangesAsync();
+            UpdateMapUrl();
 
-            message = "Event updated successfully.";
+            var parsedTime = TimeOnly.ParseExact(selectedTime, "HH:mm", CultureInfo.InvariantCulture);
+            var result = await EventService.UpdateEventAsync(
+                eventModel,
+                DateOnly.FromDateTime(eventDateOnly),
+                parsedTime,
+                userId);
+
+            if (!result.Success)
+            {
+                message = result.Message;
+                alertStyle = AlertStyle.Danger;
+                return;
+            }
+
+            message = result.Message;
             alertStyle = AlertStyle.Success;
 
             await Task.Delay(600);

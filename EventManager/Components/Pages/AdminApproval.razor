@@ -3,12 +3,11 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
 @using EventManager.Models
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
+@using EventManager.Services.Interfaces
 @using Radzen
 @using Radzen.Blazor
 
-@inject UserManager<ApplicationUser> UserManager
+@inject IAdminService AdminService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Approve Event Managers</PageTitle>
@@ -146,7 +145,7 @@
 
             <RadzenCard class="grid-card">
                 <RadzenDataGrid Data="@pendingUsers"
-                                TItem="PendingEventManagerViewModel"
+                                TItem="PendingEventManagerListItem"
                                 AllowPaging="true"
                                 PageSize="8"
                                 AllowSorting="true"
@@ -174,18 +173,18 @@
                     </HeaderTemplate>
 
                     <Columns>
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="#" Width="70px" Sortable="false" Filterable="false">
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Title="#" Width="70px" Sortable="false" Filterable="false">
                             <Template Context="user">
                                 @(pendingUsers.IndexOf(user) + 1)
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="FirstName" Title="First Name" />
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="LastName" Title="Last Name" />
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="Email" Title="Email" />
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Property="RequestedRole" Title="Requested Role" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Property="FirstName" Title="First Name" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Property="LastName" Title="Last Name" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Property="Email" Title="Email" />
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Property="RequestedRole" Title="Requested Role" />
 
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="Status" Width="140px" Sortable="false" Filterable="false">
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Title="Status" Width="140px" Sortable="false" Filterable="false">
                             <Template Context="user">
                                 <RadzenBadge Text="Pending"
                                              BadgeStyle="BadgeStyle.Warning"
@@ -193,7 +192,7 @@
                             </Template>
                         </RadzenDataGridColumn>
 
-                        <RadzenDataGridColumn TItem="PendingEventManagerViewModel" Title="Actions" Width="190px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                        <RadzenDataGridColumn TItem="PendingEventManagerListItem" Title="Actions" Width="190px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
                             <Template Context="user">
                                 <RadzenStack Orientation="Orientation.Horizontal"
                                              AlignItems="AlignItems.Center"
@@ -412,19 +411,11 @@
         background: #f8fbff;
     }
 
-    @@media (max-width: 768px) {
-        .approvals-page {
-            padding: 1rem;
-        }
-
-        .hero-title {
-            font-size: 1.3rem;
-        }
-    }
+   
 </style>
 
 @code {
-    private List<PendingEventManagerViewModel> pendingUsers = new();
+    private List<PendingEventManagerListItem> pendingUsers = new();
 
     private string? Message;
     private string messageCss = "success";
@@ -440,28 +431,7 @@
     private async Task LoadPendingUsers()
     {
         isLoading = true;
-
-        pendingUsers.Clear();
-
-        var users = await UserManager.Users
-            .Where(u => u.RequestedRole == "EventManager" && !u.IsApproved)
-            .OrderBy(u => u.FirstName)
-            .ThenBy(u => u.LastName)
-            .ToListAsync();
-
-        foreach (var user in users)
-        {
-            pendingUsers.Add(new PendingEventManagerViewModel
-            {
-                Id = user.Id,
-                Email = user.Email ?? "",
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                RequestedRole = user.RequestedRole,
-                IsApproved = user.IsApproved
-            });
-        }
-
+        pendingUsers = await AdminService.GetPendingEventManagerRequestsAsync();
         isLoading = false;
     }
 
@@ -470,36 +440,17 @@
         isProcessing = true;
         ClearMessage();
 
-        var user = await UserManager.FindByIdAsync(userId);
+        var result = await AdminService.ApproveEventManagerAsync(userId);
 
-        if (user == null)
+        if (result.Success)
         {
-            ShowError("User not found.");
-            isProcessing = false;
-            return;
+            ShowSuccess(result.Message);
+            await LoadPendingUsers();
         }
-
-        user.IsApproved = true;
-        user.RequestedRole = "EventManager";
-
-        var updateResult = await UserManager.UpdateAsync(user);
-
-        if (!updateResult.Succeeded)
+        else
         {
-            ShowError(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
-            isProcessing = false;
-            return;
+            ShowError(result.Message);
         }
-
-        if (!await UserManager.IsInRoleAsync(user, "EventManager"))
-            await UserManager.AddToRoleAsync(user, "EventManager");
-
-        if (await UserManager.IsInRoleAsync(user, "Attendee"))
-            await UserManager.RemoveFromRoleAsync(user, "Attendee");
-
-        ShowSuccess($"User {user.Email} approved as Event Manager.");
-
-        await LoadPendingUsers();
 
         isProcessing = false;
     }
@@ -509,36 +460,17 @@
         isProcessing = true;
         ClearMessage();
 
-        var user = await UserManager.FindByIdAsync(userId);
+        var result = await AdminService.RejectEventManagerAsync(userId);
 
-        if (user == null)
+        if (result.Success)
         {
-            ShowError("User not found.");
-            isProcessing = false;
-            return;
+            ShowSuccess(result.Message);
+            await LoadPendingUsers();
         }
-
-        user.RequestedRole = "Rejected";
-        user.IsApproved = false;
-
-        var updateResult = await UserManager.UpdateAsync(user);
-
-        if (!updateResult.Succeeded)
+        else
         {
-            ShowError(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
-            isProcessing = false;
-            return;
+            ShowError(result.Message);
         }
-
-        if (!await UserManager.IsInRoleAsync(user, "Attendee"))
-            await UserManager.AddToRoleAsync(user, "Attendee");
-
-        if (await UserManager.IsInRoleAsync(user, "EventManager"))
-            await UserManager.RemoveFromRoleAsync(user, "EventManager");
-
-        ShowSuccess($"User {user.Email} request rejected.");
-
-        await LoadPendingUsers();
 
         isProcessing = false;
     }

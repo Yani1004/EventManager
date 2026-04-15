@@ -1,12 +1,12 @@
 ﻿@page "/events"
 @rendermode InteractiveServer
 
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IEventService EventService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Events</PageTitle>
@@ -515,10 +515,10 @@
         height: 100%;
     }
 
-    .event-card:hover {
-        transform: translateY(-0.3rem);
-        box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.13);
-    }
+        .event-card:hover {
+            transform: translateY(-0.3rem);
+            box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.13);
+        }
 
     .event-card-stack {
         height: 100%;
@@ -588,8 +588,19 @@
 
     .view-button {
         margin-top: auto;
+        width: 100%;
+        justify-content: center;
+    }
 
+    @@media (max-width: 75rem) {
+        .events-page {
+            padding: 1rem;
+        }
 
+        .page-stack {
+            max-width: 100%;
+        }
+    }
 </style>
 
 @code {
@@ -678,12 +689,9 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        events = Db.Events
-            .Where(e => e.Status == "Active")
-            .OrderBy(e => e.Date)
-            .ToList();
+        events = await EventService.GetActiveEventsAsync();
     }
 
     private void ToggleFilters()
