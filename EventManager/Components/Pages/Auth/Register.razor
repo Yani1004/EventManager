@@ -11,7 +11,7 @@
 
 <PageTitle>Register</PageTitle>
 
-@* <div class="register-page"> *@
+<div class="register-page">
     <div class="register-shell">
         <RadzenCard class="register-card">
             <RadzenRow Gap="2rem" AlignItems="AlignItems.Stretch">
@@ -124,7 +124,10 @@
                                                        Placeholder="Enter first name"
                                                        Style="width: 100%;"
                                                        class="register-text-input" />
-                                        <ValidationMessage For="@(() => registerModel.FirstName)" />
+                                        <RadzenRequiredValidator Component="FirstName"
+                                                                 Text="First name is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -136,7 +139,10 @@
                                                        Placeholder="Enter last name"
                                                        Style="width: 100%;"
                                                        class="register-text-input" />
-                                        <ValidationMessage For="@(() => registerModel.LastName)" />
+                                        <RadzenRequiredValidator Component="LastName"
+                                                                 Text="Last name is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -148,7 +154,10 @@
                                                        Placeholder="Choose a username"
                                                        Style="width: 100%;"
                                                        class="register-text-input" />
-                                        <ValidationMessage For="@(() => registerModel.Username)" />
+                                        <RadzenRequiredValidator Component="Username"
+                                                                 Text="Username is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -160,7 +169,14 @@
                                                        Placeholder="Enter your email"
                                                        Style="width: 100%;"
                                                        class="register-text-input" />
-                                        <ValidationMessage For="@(() => registerModel.Email)" />
+                                        <RadzenRequiredValidator Component="Email"
+                                                                 Text="Email is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenEmailValidator Component="Email"
+                                                              Text="Please enter a valid email address."
+                                                              Popup="false"
+                                                              Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -173,7 +189,15 @@
                                                         Style="width: 100%;"
                                                         ToggleMask="true"
                                                         class="register-password-input" />
-                                        <ValidationMessage For="@(() => registerModel.Password)" />
+                                        <RadzenRequiredValidator Component="Password"
+                                                                 Text="Password is required."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenRegexValidator Component="Password"
+                                                              Pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z\d]).{6,}$"
+                                                              Text="Password must be at least 6 characters and include uppercase, lowercase, number, and special character."
+                                                              Popup="false"
+                                                              Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -186,7 +210,15 @@
                                                         Style="width: 100%;"
                                                         ToggleMask="true"
                                                         class="register-password-input" />
-                                        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                                        <RadzenRequiredValidator Component="ConfirmPassword"
+                                                                 Text="Please confirm your password."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
+                                        <RadzenCompareValidator Component="ConfirmPassword"
+                                                                Value="@registerModel.Password"
+                                                                Text="Passwords do not match."
+                                                                Popup="false"
+                                                                Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -201,7 +233,10 @@
                                                         Placeholder="Select account type"
                                                         Style="width: 100%;"
                                                         class="register-dropdown-input" />
-                                        <ValidationMessage For="@(() => registerModel.AccountType)" />
+                                        <RadzenRequiredValidator Component="AccountType"
+                                                                 Text="Please select an account type."
+                                                                 Popup="false"
+                                                                 Style="position: relative;" />
                                     </RadzenStack>
                                 </RadzenColumn>
 
@@ -229,7 +264,7 @@
             </RadzenRow>
         </RadzenCard>
     </div>
-@* </div> *@
+</div>
 
 <style>
     .register-page {
@@ -409,37 +444,32 @@
         flex-wrap: wrap;
         margin-top: 0.5rem;
     }
-    /* .register-text-input{
-        min-height: 48px;
-        padding-left: 0.95rem !important;
-        padding-right: 0.95rem !important;
-        border-radius: 14px !important;
-        border: 1px solid #dbe4f0 !important;
-        background-color: #f8fbff !important;
-        box-shadow: none !important
-    }
-
-    .register-password-input{
-        min-height: 48px;
-        padding-left: 0.95rem !important;
-        padding-right: 0.95rem !important;
-        border-radius: 14px !important;
-        border: 1px solid #dbe4f0 !important;
-        background-color: #f8fbff !important;
-        box-shadow: none !important
-    } */
 
     .register-text-input,
     .register-password-input,
-    .register-dropdown-input{
+    .register-dropdown-input {
         min-height: 48px;
         padding-left: 0.95rem !important;
         padding-right: 0.95rem !important;
         border-radius: 14px !important;
         border: 1px solid #dbe4f0 !important;
         background-color: #f8fbff !important;
-        box-shadow: none !important
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
     }
+
+        .register-text-input:hover,
+        .register-password-input:hover,
+        .register-dropdown-input:hover {
+            border-color: #94a3b8 !important;
+        }
+
+        .register-text-input:focus-within,
+        .register-password-input:focus-within,
+        .register-dropdown-input:focus-within {
+            border-color: #7c94ff !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08) !important;
+        }
 
     .register-primary-button,
     .register-secondary-button {
@@ -478,15 +508,23 @@
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08) !important;
         }
 
+    .register-page .rz-invalid,
+    .register-page .rz-state-invalid,
+    .register-page .rz-invalid input,
+    .register-page .rz-state-invalid input,
+    .register-page .rz-invalid .rz-dropdown-label,
+    .register-page .rz-state-invalid .rz-dropdown-label {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.10) !important;
+    }
+
+    .register-page .rz-messages-error,
     .register-page .validation-message {
         color: #dc2626;
         font-size: 0.85rem;
-        margin-top: 0.15rem;
+        margin-top: 0.2rem;
     }
-
-   
-
-    
+  
 </style>
 
 @code {

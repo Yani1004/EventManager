@@ -6,198 +6,586 @@
 @using EventManager.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
 
 <PageTitle>Manage Events</PageTitle>
 
-<div class="container py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-        <div>
-            <h1 class="fw-bold mb-1">Manage Events</h1>
-            <p class="text-muted mb-0">Review, flag, hide, restore, and re-check platform events.</p>
-        </div>
+<RadzenStack Gap="1.25rem" class="admin-events-page">
 
-        <div class="mt-3 mt-md-0">
-            <a href="/admin" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to dashboard
-            </a>
-        </div>
-    </div>
+    <RadzenCard class="events-hero-card">
+        <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+            <RadzenColumn Size="12" SizeLG="8">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                    <div class="hero-icon-wrap">
+                        <RadzenIcon Icon="event_note" class="hero-main-icon" />
+                    </div>
+
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="hero-title">
+                            Event Control Center
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body1" class="hero-subtitle">
+                            Review platform events, flag suspicious content, hide listings, and restore visibility.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenColumn>
+
+            <RadzenColumn Size="12" SizeLG="4">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             JustifyContent="JustifyContent.End"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem"
+                             class="hero-buttons">
+                    <RadzenButton Text="Back to Dashboard"
+                                  Icon="arrow_back"
+                                  Size="ButtonSize.Large"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Outlined"
+                                  Click='@(() => NavigationManager.NavigateTo("/admin"))'
+                                  class="back-button" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
 
     @if (!string.IsNullOrWhiteSpace(Message))
     {
-        <div class="alert @messageCss alert-dismissible fade show">
+        <RadzenAlert AlertStyle="@(messageCss == "alert-success" ? AlertStyle.Success : AlertStyle.Danger)"
+                     Variant="Variant.Flat"
+                     Shade="Shade.Lighter"
+                     AllowClose="true"
+                     Close="@(_ => ClearMessage())"
+                     class="events-alert">
             @Message
-            <button type="button" class="btn-close" @onclick="ClearMessage"></button>
-        </div>
+        </RadzenAlert>
     }
 
     @if (isLoading)
     {
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="spinner-border text-primary"></div>
-                    <span>Loading events...</span>
-                </div>
-            </div>
-        </div>
+        <RadzenCard class="state-card">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Medium" />
+                <RadzenStack Gap="0.2rem">
+                    <RadzenText TextStyle="TextStyle.Body1" class="state-title">Loading events...</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" class="state-subtitle">Preparing event moderation data.</RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
     }
     else if (events.Count == 0)
     {
-        <div class="alert alert-info shadow-sm">
-            There are no events in the system.
-        </div>
+        <RadzenCard class="state-card empty-card">
+            <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.75rem" class="empty-stack">
+                <div class="empty-icon-wrap">
+                    <RadzenIcon Icon="event_busy" class="empty-icon" />
+                </div>
+                <RadzenText TextStyle="TextStyle.H5" class="empty-title">No events found</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" class="empty-text">
+                    When new events are created, they will appear here for admin review.
+                </RadzenText>
+            </RadzenStack>
+        </RadzenCard>
     }
     else
     {
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <label class="form-label">Search</label>
-                <InputText class="form-control" @bind-Value="searchTerm" placeholder="Search by title, location, category..." />
-            </div>
+        <RadzenRow Gap="1rem">
+            <RadzenColumn Size="12" SizeMD="3">
+                <RadzenCard class="metric-card metric-card-primary">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenStack Gap="0.3rem">
+                            <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Visible Results</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count</RadzenText>
+                        </RadzenStack>
+                        <div class="metric-icon-wrap">
+                            <RadzenIcon Icon="dashboard" class="metric-icon" />
+                        </div>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-            <div class="col-md-3">
-                <label class="form-label">Status</label>
-                <InputSelect class="form-select" @bind-Value="selectedStatus">
-                    <option value="">All statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Flagged">Flagged</option>
-                    <option value="Hidden">Hidden</option>
-                    <option value="PendingReview">Pending Review</option>
-                </InputSelect>
-            </div>
+            <RadzenColumn Size="12" SizeMD="3">
+                <RadzenCard class="metric-card metric-card-success">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenStack Gap="0.3rem">
+                            <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Active</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Active")</RadzenText>
+                        </RadzenStack>
+                        <div class="metric-icon-wrap">
+                            <RadzenIcon Icon="check_circle" class="metric-icon" />
+                        </div>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-            <div class="col-md-3">
-                <label class="form-label">Sort</label>
-                <InputSelect class="form-select" @bind-Value="selectedSort">
-                    <option value="date_asc">Date: Soonest First</option>
-                    <option value="date_desc">Date: Latest First</option>
-                    <option value="title_asc">Title: A-Z</option>
-                    <option value="title_desc">Title: Z-A</option>
-                </InputSelect>
-            </div>
+            <RadzenColumn Size="12" SizeMD="3">
+                <RadzenCard class="metric-card metric-card-warning">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenStack Gap="0.3rem">
+                            <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Flagged</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Flagged")</RadzenText>
+                        </RadzenStack>
+                        <div class="metric-icon-wrap">
+                            <RadzenIcon Icon="flag" class="metric-icon" />
+                        </div>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-            <div class="col-md-2 d-flex align-items-end">
-                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
-                    Clear
-                </button>
-            </div>
-        </div>
+            <RadzenColumn Size="12" SizeMD="3">
+                <RadzenCard class="metric-card metric-card-dark">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenStack Gap="0.3rem">
+                            <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Hidden</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Hidden")</RadzenText>
+                        </RadzenStack>
+                        <div class="metric-icon-wrap">
+                            <RadzenIcon Icon="visibility_off" class="metric-icon" />
+                        </div>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
 
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Title</th>
-                                <th>Date</th>
-                                <th>Location</th>
-                                <th>Category</th>
-                                <th>Created By</th>
-                                <th>Status</th>
-                                <th style="min-width: 280px;">Admin Note</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
+        <RadzenCard class="filters-panel">
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeLG="4">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Body2" class="input-label">Search</RadzenText>
+                        <RadzenTextBox @bind-Value="searchTerm"
+                                       Placeholder="Title, location, category..."
+                                       Style="width: 100%;"
+                                       class="filter-input" />
+                    </RadzenStack>
+                </RadzenColumn>
 
-                        <tbody>
-                            @for (int i = 0; i < FilteredEvents.Count; i++)
-                            {
-                                var ev = FilteredEvents[i];
+                <RadzenColumn Size="12" SizeLG="3">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Body2" class="input-label">Status</RadzenText>
+                        <RadzenDropDown @bind-Value="selectedStatus"
+                                        Data="@statusOptions"
+                                        TextProperty="Text"
+                                        ValueProperty="Value"
+                                        Placeholder="All statuses"
+                                        Style="width: 100%;"
+                                        class="filter-input" />
+                    </RadzenStack>
+                </RadzenColumn>
 
-                                <tr>
-                                    <td>@(i + 1)</td>
-                                    <td>@ev.Title</td>
-                                    <td>@ev.Date.ToString("dd.MM.yyyy HH:mm")</td>
-                                    <td>@ev.Location</td>
-                                    <td>@ev.Category</td>
-                                    <td>@GetCreatorName(ev.CreatorId)</td>
-                                    <td>
-                                        <span class="badge @GetStatusBadgeClass(ev.Status)">
-                                            @GetStatusLabel(ev.Status)
-                                        </span>
-                                    </td>
+                <RadzenColumn Size="12" SizeLG="3">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Body2" class="input-label">Sort</RadzenText>
+                        <RadzenDropDown @bind-Value="selectedSort"
+                                        Data="@sortOptions"
+                                        TextProperty="Text"
+                                        ValueProperty="Value"
+                                        Style="width: 100%;"
+                                        class="filter-input" />
+                    </RadzenStack>
+                </RadzenColumn>
 
-                                    <td>
-                                        <input class="form-control form-control-sm"
-                                               placeholder="Write admin note..."
-                                               value="@GetAdminNoteValue(ev.Id)"
-                                               @oninput="(e) => UpdateAdminNoteInput(ev.Id, e.Value?.ToString() ?? string.Empty)" />
+                <RadzenColumn Size="12" SizeLG="2">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Body2" class="input-label invisible-label">Clear</RadzenText>
+                        <RadzenButton Text="Clear"
+                                      Icon="filter_alt_off"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      Variant="Variant.Outlined"
+                                      Style="width: 100%;"
+                                      Click="@ClearFilters"
+                                      class="clear-button" />
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
 
-                                        @if (!string.IsNullOrWhiteSpace(ev.AdminNote))
-                                        {
-                                            <div class="small text-muted mt-1">
-                                                Saved: @ev.AdminNote
-                                            </div>
-                                        }
-                                    </td>
+        <RadzenCard class="grid-shell">
+            <RadzenDataGrid Data="@FilteredEvents"
+                            TItem="Event"
+                            AllowPaging="true"
+                            PageSize="8"
+                            PagerHorizontalAlign="HorizontalAlign.Right"
+                            ShowPagingSummary="true"
+                            class="admin-events-grid">
 
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
-                                            <a href="/events/@ev.Id" class="btn btn-outline-primary btn-sm" title="View">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
+                <Columns>
+                    <RadzenDataGridColumn TItem="Event" Title="Event">
+                        <Template Context="ev">
+                            <RadzenStack Gap="0.35rem">
+                                <RadzenText TextStyle="TextStyle.Body1" class="event-name">
+                                    @ev.Title
+                                </RadzenText>
 
-                                            @if (ev.Status == "Active" || ev.Status == "Hidden" || ev.Status == "PendingReview")
-                                            {
-                                                <button class="btn btn-warning btn-sm"
-                                                        title="Flag"
-                                                        disabled="@isProcessing"
-                                                        @onclick='() => FlagEvent(ev.Id)'>
-                                                    <i class="bi bi-flag-fill"></i>
-                                                </button>
-                                            }
+                                <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.35rem">
+                                        <RadzenIcon Icon="schedule" class="tiny-icon" />
+                                        <RadzenText TextStyle="TextStyle.Caption" class="muted-text">
+                                            @ev.Date.ToString("dd.MM.yyyy HH:mm")
+                                        </RadzenText>
+                                    </RadzenStack>
 
-                                            @if (ev.Status == "Flagged")
-                                            {
-                                                <button class="btn btn-outline-warning btn-sm"
-                                                        title="Update note"
-                                                        disabled="@isProcessing"
-                                                        @onclick='() => UpdateFlaggedNote(ev.Id)'>
-                                                    <i class="bi bi-save"></i>
-                                                </button>
-                                            }
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.35rem">
+                                        <RadzenIcon Icon="place" class="tiny-icon" />
+                                        <RadzenText TextStyle="TextStyle.Caption" class="muted-text">
+                                            @ev.Location
+                                        </RadzenText>
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenStack>
+                        </Template>
+                    </RadzenDataGridColumn>
 
-                                            @if (ev.Status != "Hidden")
-                                            {
-                                                <button class="btn btn-secondary btn-sm"
-                                                        title="Hide"
-                                                        disabled="@isProcessing"
-                                                        @onclick='() => UpdateStatus(ev.Id, "Hidden")'>
-                                                    <i class="bi bi-eye-slash-fill"></i>
-                                                </button>
-                                            }
+                    <RadzenDataGridColumn TItem="Event" Title="Category">
+                        <Template Context="ev">
+                            <RadzenBadge Text="@ev.Category"
+                                         Variant="Variant.Flat"
+                                         Shade="Shade.Lighter"
+                                         class="category-badge" />
+                        </Template>
+                    </RadzenDataGridColumn>
 
-                                            @if (ev.Status != "Active")
-                                            {
-                                                <button class="btn btn-success btn-sm"
-                                                        title="Restore"
-                                                        disabled="@isProcessing"
-                                                        @onclick='() => UpdateStatus(ev.Id, "Active")'>
-                                                    <i class="bi bi-arrow-clockwise"></i>
-                                                </button>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+                    <RadzenDataGridColumn TItem="Event" Title="Created By">
+                        <Template Context="ev">
+                            <RadzenText TextStyle="TextStyle.Body2">@GetCreatorName(ev.CreatorId)</RadzenText>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="Event" Title="Status">
+                        <Template Context="ev">
+                            <span class="@GetStatusPillClass(ev.Status)">
+                                @GetStatusLabel(ev.Status)
+                            </span>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="Event" Title="Admin Note">
+                        <Template Context="ev">
+                            <RadzenStack Gap="0.45rem">
+                                <RadzenTextBox Value="@GetAdminNoteValue(ev.Id)"
+                                               Placeholder="Write admin note..."
+                                               Style="width: 100%;"
+                                               Change="@(args => UpdateAdminNoteInput(ev.Id, args?.ToString() ?? string.Empty))"
+                                               class="note-input" />
+
+                                @if (!string.IsNullOrWhiteSpace(ev.AdminNote))
+                                {
+                                    <RadzenText TextStyle="TextStyle.Caption" class="saved-note">
+                                        Saved: @ev.AdminNote
+                                    </RadzenText>
+                                }
+                            </RadzenStack>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="Event" Title="Actions">
+                        <Template Context="ev">
+                            <RadzenWrap Gap="1rem">
+                                <RadzenButton Icon="visibility"
+                                              ButtonStyle="ButtonStyle.Info"
+                                              Variant="Variant.Outlined"
+                                              Size="ButtonSize.Small"
+                                              Click='@(() => NavigationManager.NavigateTo($"/events/{ev.Id}"))'
+                                              class="action-button"
+                                              title="View" />
+
+                                @if (ev.Status == "Active" || ev.Status == "Hidden" || ev.Status == "PendingReview")
+                                {
+                                    <RadzenButton Icon="flag"
+                                                  ButtonStyle="ButtonStyle.Warning"
+                                                  Variant="Variant.Filled"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => FlagEvent(ev.Id))'
+                                                  class="action-button"
+                                                  title="Flag" />
+                                }
+
+                                @if (ev.Status == "Flagged")
+                                {
+                                    <RadzenButton Icon="save"
+                                                  ButtonStyle="ButtonStyle.Warning"
+                                                  Variant="Variant.Outlined"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => UpdateFlaggedNote(ev.Id))'
+                                                  class="action-button"
+                                                  title="Update note" />
+                                }
+
+                                @if (ev.Status != "Hidden")
+                                {
+                                    <RadzenButton Icon="visibility_off"
+                                                  ButtonStyle="ButtonStyle.Secondary"
+                                                  Variant="Variant.Filled"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => UpdateStatus(ev.Id, "Hidden"))'
+                                                  class="action-button"
+                                                  title="Hide" />
+                                }
+
+                                @if (ev.Status != "Active")
+                                {
+                                    <RadzenButton Icon="restart_alt"
+                                                  ButtonStyle="ButtonStyle.Success"
+                                                  Variant="Variant.Filled"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@isProcessing"
+                                                  Click='@(() => UpdateStatus(ev.Id, "Active"))'
+                                                  class="action-button"
+                                                  title="Restore" />
+                                }
+                            </RadzenWrap>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
     }
-</div>
+</RadzenStack>
 
 <style>
-    .table td, .table th {
-        vertical-align: middle;
+    .admin-events-page {
+        padding: 1.5rem;
     }
+
+    .events-hero-card,
+    .metric-card,
+    .filters-panel,
+    .grid-shell,
+    .state-card {
+        border: none;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    .events-hero-card {
+        padding: 0.6rem;
+        background: radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 30%),
+                    linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #4f46e5 100%);
+    }
+
+    .hero-icon-wrap {
+        width: 72px;
+        height: 72px;
+        min-width: 72px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.16);
+    }
+
+    .hero-main-icon {
+        font-size: 2rem;
+        color: white;
+    }
+
+    .hero-title {
+        color: white;
+        font-weight: 800;
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.88);
+    }
+
+    .back-button {
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        padding: 0.85rem 1.15rem !important;
+        background: rgba(255,255,255,0.12) !important;
+        color: white !important;
+        border-color: rgba(255,255,255,0.32) !important;
+    }
+
+    .metric-card {
+        color: white;
+    }
+
+    .metric-card-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    }
+
+    .metric-card-success {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    }
+
+    .metric-card-warning {
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    }
+
+    .metric-card-dark {
+        background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    }
+
+    .metric-label {
+        color: rgba(255,255,255,0.82);
+        font-weight: 600;
+    }
+
+    .metric-value {
+        color: white;
+        font-weight: 800;
+    }
+
+    .metric-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.18);
+    }
+
+    .metric-icon {
+        color: white;
+        font-size: 1.45rem;
+    }
+
+    .filters-panel,
+    .grid-shell,
+    .empty-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    .input-label {
+        font-weight: 700;
+        color: #334155;
+    }
+
+    .invisible-label {
+        opacity: 0;
+    }
+
+    .event-name {
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .tiny-icon {
+        font-size: 1rem;
+        color: #64748b;
+    }
+
+    .muted-text {
+        color: #64748b;
+    }
+
+    .category-badge {
+        border-radius: 999px;
+        font-weight: 700;
+        color: #4338ca;
+        background: rgba(99,102,241,0.10);
+    }
+
+    .saved-note {
+        color: #64748b;
+        font-style: italic;
+    }
+
+    .note-input,
+    .filter-input,
+    .clear-button,
+    .action-button {
+        border-radius: 14px !important;
+    }
+
+    .admin-events-grid .rz-grid-table td,
+    .admin-events-grid .rz-grid-table th {
+        vertical-align: middle;
+        white-space: normal;
+    }
+
+    .admin-events-grid .rz-grid-table th {
+        font-weight: 800;
+    }
+
+    .admin-events-grid .rz-datatable-tablewrapper {
+        overflow-x: visible !important;
+    }
+
+    .admin-events-grid .rz-datatable-table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.42rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .status-active {
+        background: rgba(16, 185, 129, 0.14);
+        color: #047857;
+    }
+
+    .status-flagged {
+        background: rgba(245, 158, 11, 0.18);
+        color: #b45309;
+    }
+
+    .status-hidden {
+        background: rgba(100, 116, 139, 0.16);
+        color: #475569;
+    }
+
+    .status-pending {
+        background: rgba(59, 130, 246, 0.14);
+        color: #1d4ed8;
+    }
+
+    .status-default {
+        background: rgba(148, 163, 184, 0.14);
+        color: #475569;
+    }
+
+    .state-title,
+    .empty-title {
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .state-subtitle,
+    .empty-text {
+        color: #64748b;
+    }
+
+    .empty-stack {
+        min-height: 230px;
+        text-align: center;
+    }
+
+    .empty-icon-wrap {
+        width: 84px;
+        height: 84px;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(79,70,229,0.12));
+    }
+
+    .empty-icon {
+        font-size: 2.3rem;
+        color: #2563eb;
+    }
+
+  
 </style>
 
 @code {
@@ -214,6 +602,23 @@
     private string searchTerm = string.Empty;
     private string selectedStatus = string.Empty;
     private string selectedSort = "date_asc";
+
+    private readonly List<OptionItem> statusOptions = new()
+    {
+        new() { Text = "All statuses", Value = "" },
+        new() { Text = "Active", Value = "Active" },
+        new() { Text = "Flagged", Value = "Flagged" },
+        new() { Text = "Hidden", Value = "Hidden" },
+        new() { Text = "Pending Review", Value = "PendingReview" }
+    };
+
+    private readonly List<OptionItem> sortOptions = new()
+    {
+        new() { Text = "Date: Soonest First", Value = "date_asc" },
+        new() { Text = "Date: Latest First", Value = "date_desc" },
+        new() { Text = "Title: A-Z", Value = "title_asc" },
+        new() { Text = "Title: Z-A", Value = "title_desc" }
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -271,9 +676,9 @@
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(e =>
-                    e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    e.Location.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    e.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                    (e.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Location?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Category?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
             }
 
             if (!string.IsNullOrWhiteSpace(selectedStatus))
@@ -439,19 +844,19 @@
             : "Unknown";
     }
 
-    private string GetStatusBadgeClass(string status) => status switch
-    {
-        "Active" => "bg-success",
-        "Flagged" => "bg-warning text-dark",
-        "PendingReview" => "bg-info text-dark",
-        "Hidden" => "bg-secondary",
-        _ => "bg-light text-dark"
-    };
-
     private string GetStatusLabel(string status) => status switch
     {
         "PendingReview" => "Pending Review",
         _ => status
+    };
+
+    private string GetStatusPillClass(string status) => status switch
+    {
+        "Active" => "status-pill status-active",
+        "Flagged" => "status-pill status-flagged",
+        "PendingReview" => "status-pill status-pending",
+        "Hidden" => "status-pill status-hidden",
+        _ => "status-pill status-default"
     };
 
     private void ClearFilters()
@@ -476,5 +881,11 @@
     private void ClearMessage()
     {
         Message = null;
+    }
+
+    private class OptionItem
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
     }
 }

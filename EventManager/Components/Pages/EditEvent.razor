@@ -17,247 +17,696 @@
 
 <PageTitle>Edit Event</PageTitle>
 
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow border-0 create-event-card">
-                <div class="card-body p-4 p-md-5">
-                    <h1 class="mb-2">Edit Event</h1>
-                    <p class="text-muted mb-4">Update your event details below.</p>
+<div class="create-event-page">
+    <div class="create-event-container">
+        <RadzenCard class="create-event-shell">
+            <RadzenStack Gap="1.5rem">
 
-                    @if (isLoading)
+                <div class="create-event-header">
+                    <div class="badge-wrap">
+                        <RadzenBadge Text="Event Manager"
+                                     Shade="Shade.Light"
+                                     Variant="Variant.Flat"
+                                     class="section-badge" />
+                    </div>
+
+                    <h1>Edit Event</h1>
+                    <p class="subtitle">
+                        Update your event details and keep everything accurate for your audience.
+                    </p>
+                </div>
+
+                @if (isLoading)
+                {
+                    <RadzenCard class="state-card">
+                        <RadzenStack Orientation="Orientation.Horizontal"
+                                     AlignItems="AlignItems.Center"
+                                     Gap="0.75rem">
+                            <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                       Size="ProgressBarCircularSize.Medium" />
+                            <div>
+                                <div class="state-title">Loading event</div>
+                                <div class="state-subtitle">Please wait while we retrieve your event details.</div>
+                            </div>
+                        </RadzenStack>
+                    </RadzenCard>
+                }
+                else if (eventModel == null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning"
+                                 Variant="Variant.Flat"
+                                 Shade="Shade.Light"
+                                 ShowIcon="true"
+                                 class="custom-alert">
+                        Event not found or access denied.
+                    </RadzenAlert>
+
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 JustifyContent="JustifyContent.End">
+                        <RadzenButton Text="Back to My Events"
+                                      Icon="arrow_back"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      Variant="Variant.Outlined"
+                                      Size="ButtonSize.Large"
+                                      Click="@GoBack"
+                                      class="cancel-btn" />
+                    </RadzenStack>
+                }
+                else
+                {
+                    @if (eventModel.Status == "Flagged" && !string.IsNullOrWhiteSpace(eventModel.AdminNote))
                     {
-                        <p>Loading event...</p>
+                        <RadzenAlert AlertStyle="AlertStyle.Warning"
+                                     Variant="Variant.Flat"
+                                     Shade="Shade.Light"
+                                     ShowIcon="true"
+                                     class="custom-alert">
+                            <strong>Admin note:</strong> @eventModel.AdminNote
+                        </RadzenAlert>
                     }
-                    else if (eventModel == null)
+
+                    @if (!string.IsNullOrWhiteSpace(message))
                     {
-                        <div class="alert alert-warning">
-                            Event not found or access denied.
-                        </div>
+                        <RadzenAlert AlertStyle="@alertStyle"
+                                     Variant="Variant.Flat"
+                                     Shade="Shade.Light"
+                                     ShowIcon="true"
+                                     class="custom-alert">
+                            @message
+                        </RadzenAlert>
                     }
-                    else
+
+                    @if (!string.IsNullOrWhiteSpace(dateValidationMessage))
                     {
-                        @if (eventModel.Status == "Flagged" && !string.IsNullOrWhiteSpace(eventModel.AdminNote))
-                        {
-                            <div class="alert alert-warning mb-4">
-                                <strong>Admin note:</strong> @eventModel.AdminNote
-                            </div>
-                        }
+                        <RadzenAlert AlertStyle="AlertStyle.Danger"
+                                     Variant="Variant.Flat"
+                                     Shade="Shade.Light"
+                                     ShowIcon="true"
+                                     class="custom-alert">
+                            @dateValidationMessage
+                        </RadzenAlert>
+                    }
 
-                        @if (!string.IsNullOrWhiteSpace(message))
-                        {
-                            <div class="alert @messageCss mb-4">@message</div>
-                        }
+                    <RadzenTemplateForm TItem="Event" Data="@eventModel" Submit="@HandleEditEvent">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="validation-summary" />
 
-                        <EditForm Model="eventModel" OnValidSubmit="HandleEditEvent" FormName="editEventForm">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary class="mb-3 text-danger" />
+                        <RadzenStack Gap="1.25rem">
 
-                            <div class="mb-3">
-                                <label class="form-label">Title</label>
-                                <InputText class="form-control" @bind-Value="eventModel.Title" />
-                                <ValidationMessage For="@(() => eventModel.Title)" class="text-danger" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <InputTextArea class="form-control" @bind-Value="eventModel.Description" />
-                                <ValidationMessage For="@(() => eventModel.Description)" class="text-danger" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Category</label>
-                                <InputSelect class="form-select" @bind-Value="eventModel.Category">
-                                    <option value="">Select a category</option>
-                                    @foreach (var category in categories)
-                                    {
-                                        <option value="@category">@category</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="@(() => eventModel.Category)" class="text-danger" />
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Date and Time</label>
-                                    <RadzenDatePicker Name="EventDateInput"
-                                                      @bind-Value="eventModel.Date"
-                                                      ShowTime="true"
-                                                      DateFormat="dd.MM.yyyy HH:mm"
-                                                      Min="@minimumEventDate"
-                                                      Culture="@englishCulture"
-                                                      Class="w-100 event-datepicker" />
-
-                                    @if (!string.IsNullOrWhiteSpace(dateValidationMessage))
-                                    {
-                                        <div class="text-danger mt-1">@dateValidationMessage</div>
-                                    }
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label">Capacity</label>
-                                    <InputNumber class="form-control" @bind-Value="eventModel.Capacity" />
-                                    <ValidationMessage For="@(() => eventModel.Capacity)" class="text-danger" />
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-1">
-                                <div class="col-md-6">
-                                    <label class="form-label">Price</label>
-                                    <InputNumber class="form-control" @bind-Value="eventModel.Price" />
-                                    <ValidationMessage For="@(() => eventModel.Price)" class="text-danger" />
-                                    <div class="form-text">Use 0 for free events.</div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label">Image URL</label>
-                                    <InputText class="form-control" @bind-Value="eventModel.ImageUrl" />
-                                    <ValidationMessage For="@(() => eventModel.ImageUrl)" class="text-danger" />
-                                </div>
-                            </div>
-
-                            <div class="mb-3 mt-3">
-                                <label class="form-label">Location</label>
-                                <input class="form-control"
-                                       value="@eventModel.Location"
-                                       @oninput="OnLocationChanged" />
-                                <ValidationMessage For="@(() => eventModel.Location)" class="text-danger" />
-                                <div class="form-text">Enter city, venue, or full address.</div>
-                            </div>
-
-                            @if (!string.IsNullOrWhiteSpace(eventModel.Location))
-                            {
-                                <div class="map-preview-box mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong>Location Preview</strong>
-                                        <a class="btn btn-sm btn-outline-primary" href="@googleMapsSearchUrl" target="_blank">
-                                            Open in Google Maps
-                                        </a>
+                            <RadzenCard class="form-section">
+                                <RadzenStack Gap="1rem">
+                                    <div class="section-title">
+                                        <div class="section-icon">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </div>
+                                        <h4>Basic Information</h4>
                                     </div>
 
-                                    <iframe src="@googleMapsEmbedUrl"
-                                            height="260"
-                                            style="border:0; border-radius:12px; width:100%;"
-                                            allowfullscreen
-                                            loading="lazy">
-                                    </iframe>
-                                </div>
-                            }
+                                    <RadzenStack Gap="0.35rem">
+                                        <label class="form-label">Title</label>
+                                        <RadzenTextBox Name="Title"
+                                                       @bind-Value="eventModel.Title"
+                                                       Placeholder="Enter event title"
+                                                       Style="width: 100%;"
+                                                       class="rz-field" />
+                                        <ValidationMessage For="@(() => eventModel.Title)" class="validation-text" />
+                                    </RadzenStack>
+
+                                    <RadzenStack Gap="0.35rem">
+                                        <label class="form-label">Description</label>
+                                        <RadzenTextArea Name="Description"
+                                                        @bind-Value="eventModel.Description"
+                                                        Placeholder="Describe your event"
+                                                        Rows="6"
+                                                        Style="width: 100%;"
+                                                        class="rz-field" />
+                                        <ValidationMessage For="@(() => eventModel.Description)" class="validation-text" />
+                                    </RadzenStack>
+
+                                    <RadzenStack Gap="0.35rem">
+                                        <label class="form-label">Category</label>
+                                        <RadzenDropDown Name="Category"
+                                                        Data="@categories"
+                                                        @bind-Value="eventModel.Category"
+                                                        Placeholder="Select a category"
+                                                        AllowClear="true"
+                                                        Style="width: 100%;"
+                                                        class="rz-field" />
+                                        <ValidationMessage For="@(() => eventModel.Category)" class="validation-text" />
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenCard>
+
+                            <RadzenCard class="form-section">
+                                <RadzenStack Gap="1rem">
+                                    <div class="section-title">
+                                        <div class="section-icon">
+                                            <i class="bi bi-calendar-event"></i>
+                                        </div>
+                                        <h4>Schedule & Capacity</h4>
+                                    </div>
+
+                                    <RadzenRow Gap="16px">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenStack Gap="0.35rem">
+                                                <label class="form-label">Date</label>
+                                                <RadzenDatePicker Name="EventDateInput"
+                                                                  @bind-Value="eventDateOnly"
+                                                                  DateFormat="dd.MM.yyyy"
+                                                                  Min="@minimumEventDate.Date"
+                                                                  Culture="@englishCulture"
+                                                                  Style="width: 100%;"
+                                                                  class="rz-field" />
+                                            </RadzenStack>
+                                        </RadzenColumn>
+
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenStack Gap="0.35rem">
+                                                <label class="form-label">Time</label>
+                                                <RadzenDropDown Name="EventTimeInput"
+                                                                Data="@timeOptions"
+                                                                TextProperty="Label"
+                                                                ValueProperty="Value"
+                                                                @bind-Value="selectedTime"
+                                                                Placeholder="Select time"
+                                                                AllowClear="false"
+                                                                Style="width: 100%;"
+                                                                class="rz-field time-dropdown" />
+                                            </RadzenStack>
+                                        </RadzenColumn>
+
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenStack Gap="0.35rem">
+                                                <label class="form-label">Capacity</label>
+                                                <RadzenNumeric Name="Capacity"
+                                                               TValue="int"
+                                                               @bind-Value="eventModel.Capacity"
+                                                               Min="1"
+                                                               Step="1"
+                                                               Placeholder="Enter capacity"
+                                                               Style="width: 100%;"
+                                                               class="rz-field" />
+                                                <ValidationMessage For="@(() => eventModel.Capacity)" class="validation-text" />
+                                            </RadzenStack>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </RadzenStack>
+                            </RadzenCard>
+
+                            <RadzenCard class="form-section">
+                                <RadzenStack Gap="1rem">
+                                    <div class="section-title">
+                                        <div class="section-icon">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </div>
+                                        <h4>Pricing & Media</h4>
+                                    </div>
+
+                                    <RadzenRow Gap="16px">
+                                        <RadzenColumn Size="12" SizeMD="6">
+                                            <RadzenStack Gap="0.35rem">
+                                                <label class="form-label">Price</label>
+                                                <RadzenNumeric TValue="decimal"
+                                                               Name="Price"
+                                                               @bind-Value="eventModel.Price"
+                                                               Min="0"
+                                                               Step="0.01"
+                                                               Format="0.00"
+                                                               Placeholder="Enter price"
+                                                               Style="width: 100%;"
+                                                               class="rz-field" />
+                                                <ValidationMessage For="@(() => eventModel.Price)" class="validation-text" />
+                                                <small class="form-helper">Set 0 if this is a free event.</small>
+                                            </RadzenStack>
+                                        </RadzenColumn>
+
+                                        <RadzenColumn Size="12" SizeMD="6">
+                                            <RadzenStack Gap="0.35rem">
+                                                <label class="form-label">Image URL</label>
+                                                <RadzenTextBox Name="ImageUrl"
+                                                               @bind-Value="eventModel.ImageUrl"
+                                                               Placeholder="Paste image URL"
+                                                               Style="width: 100%;"
+                                                               class="rz-field" />
+                                                <ValidationMessage For="@(() => eventModel.ImageUrl)" class="validation-text" />
+                                            </RadzenStack>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </RadzenStack>
+                            </RadzenCard>
+
+                            <RadzenCard class="form-section">
+                                <RadzenStack Gap="1rem">
+                                    <div class="section-title">
+                                        <div class="section-icon">
+                                            <i class="bi bi-geo-alt"></i>
+                                        </div>
+                                        <h4>Location</h4>
+                                    </div>
+
+                                    <RadzenStack Gap="0.35rem">
+                                        <label class="form-label">Venue / Address</label>
+                                        <RadzenTextBox Name="Location"
+                                                       Value="@eventModel.Location"
+                                                       Change="@OnLocationChanged"
+                                                       Placeholder="Enter city, venue, or full address"
+                                                       Style="width: 100%;"
+                                                       class="rz-field" />
+                                        <ValidationMessage For="@(() => eventModel.Location)" class="validation-text" />
+                                    </RadzenStack>
+
+                                    @if (!string.IsNullOrWhiteSpace(eventModel.Location))
+                                    {
+                                        <RadzenCard class="preview-card">
+                                            <div class="preview-card-header">
+                                                <div>
+                                                    <h5>Location Preview</h5>
+                                                    <p>Check how the address looks on the map.</p>
+                                                </div>
+
+                                                <RadzenButton Text="Open in Google Maps"
+                                                              Icon="open_in_new"
+                                                              ButtonStyle="ButtonStyle.Light"
+                                                              Variant="Variant.Outlined"
+                                                              Size="ButtonSize.Small"
+                                                              Click="@OpenGoogleMaps" />
+                                            </div>
+
+                                            <div class="map-wrapper">
+                                                <iframe src="@googleMapsEmbedUrl"
+                                                        height="320"
+                                                        class="preview-frame"
+                                                        allowfullscreen
+                                                        loading="lazy">
+                                                </iframe>
+                                            </div>
+                                        </RadzenCard>
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
 
                             @if (!string.IsNullOrWhiteSpace(eventModel.ImageUrl))
                             {
-                                <div class="image-preview-box mb-4">
-                                    <strong class="d-block mb-2">Image Preview</strong>
-                                    <img src="@eventModel.ImageUrl"
-                                         alt="Event preview"
-                                         class="img-fluid rounded preview-image" />
-                                </div>
+                                <RadzenCard class="form-section">
+                                    <RadzenStack Gap="1rem">
+                                        <div class="section-title">
+                                            <div class="section-icon">
+                                                <i class="bi bi-image"></i>
+                                            </div>
+                                            <h4>Image Preview</h4>
+                                        </div>
+
+                                        <RadzenCard class="preview-card">
+                                            <img src="@eventModel.ImageUrl"
+                                                 alt="Event preview"
+                                                 class="preview-image" />
+                                        </RadzenCard>
+                                    </RadzenStack>
+                                </RadzenCard>
                             }
 
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
-                                    @(isSubmitting ? "Saving..." : "Save Changes")
-                                </button>
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         Gap="1rem"
+                                         JustifyContent="JustifyContent.End"
+                                         AlignItems="AlignItems.Center"
+                                         Wrap="FlexWrap.Wrap"
+                                         class="action-bar">
 
-                                <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="GoBack">
-                                    Cancel
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                </div>
-            </div>
-        </div>
+                                <RadzenButton ButtonType="ButtonType.Submit"
+                                              Text="@(isSubmitting ? "Saving Changes..." : "Save Changes")"
+                                              Icon="save"
+                                              IsBusy="@isSubmitting"
+                                              BusyText="Saving..."
+                                              Size="ButtonSize.Large"
+                                              class="create-btn" />
+
+                                <RadzenButton Text="Cancel"
+                                              Icon="close"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              Variant="Variant.Outlined"
+                                              Size="ButtonSize.Large"
+                                              Click="@GoBack"
+                                              Disabled="@isSubmitting"
+                                              class="cancel-btn" />
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenTemplateForm>
+                }
+            </RadzenStack>
+        </RadzenCard>
     </div>
 </div>
 
 <style>
-    .create-event-card {
-        border-radius: 20px;
+    .create-event-page {
+        min-height: 100%;
+        padding: 2rem 1rem;
     }
 
-    .map-preview-box,
-    .image-preview-box {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 16px;
+    .create-event-container {
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    .rz-calendar-view td .rz-state-active.rz-state-focused,
+    .rz-calendar-view td .rz-state-active:hover,
+    .rz-calendar-view td .rz-state-active.rz-calendar-today.rz-state-focused,
+    .rz-calendar-view td .rz-state-active.rz-calendar-today:hover {
+        color: var(--rz-datepicker-calendar-selected-hover-color);
+        background-color: #2e70ef;
+    }
+
+    .rz-field {
+        min-height: 48px;
+        padding-left: 0.95rem !important;
+        padding-right: 0.95rem !important;
+        border-radius: 14px !important;
+        border: 1px solid #dbe4f0 !important;
+        background-color: #f8fbff !important;
+        box-shadow: none !important;
+    }
+
+    .create-event-shell {
+        padding: 2rem;
+        border-radius: 28px;
+        border: 1px solid #e9eef7;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 20px 50px rgba(31, 41, 55, 0.08);
+    }
+
+    .create-event-header {
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .badge-wrap {
+        margin-bottom: 0.9rem;
+    }
+
+    .section-badge {
+        border-radius: 999px !important;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 0.45rem 0.85rem !important;
+    }
+
+    .create-event-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1f2a44;
+    }
+
+    .subtitle {
+        margin: 0;
+        color: #667085;
+        font-size: 1rem;
+    }
+
+    .form-section {
+        border-radius: 22px;
+        border: 1px solid #e8eef6;
+        box-shadow: 0 10px 25px rgba(31, 41, 55, 0.04);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        padding: 1.25rem;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .section-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e7f0ff 0%, #f0e9ff 100%);
+        color: #3b5bcc;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .section-title h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #24314f;
+    }
+
+    .form-label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #344054;
+    }
+
+    .form-helper {
+        color: #667085;
+        font-size: 0.88rem;
+    }
+
+    .validation-summary {
+        color: #b42318;
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        border-radius: 14px;
         padding: 1rem;
     }
 
-    .preview-image {
-        max-height: 280px;
-        width: 100%;
-        object-fit: cover;
+    .validation-text {
+        font-size: 0.88rem;
+        color: #d92d20;
     }
 
-    .create-event-card .form-control,
-    .create-event-card .form-select {
-        min-height: 48px;
-        height: 48px;
-        border: 1px solid #ced4da !important;
-        border-radius: 12px !important;
-        box-shadow: none !important;
+    .custom-alert {
+        border-radius: 16px;
+    }
+
+    .preview-card {
+        border-radius: 18px;
+        border: 1px solid #e6edf7;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        padding: 1rem;
+    }
+
+    .preview-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .preview-card-header h5 {
+        margin: 0 0 0.25rem 0;
         font-size: 1rem;
-        padding: 0.75rem 1rem;
+        font-weight: 700;
+        color: #24314f;
     }
 
-    .create-event-card textarea.form-control {
-        min-height: 170px;
-        height: 170px;
-        resize: vertical;
-        padding-top: 0.9rem;
+    .preview-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 0.92rem;
     }
 
-    .create-event-card .form-control:focus,
-    .create-event-card .form-select:focus {
-        border-color: #86b7fe !important;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+    .map-wrapper {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #e6edf7;
     }
 
-    .create-event-card .rz-datepicker {
+    .preview-frame {
         width: 100%;
+        border: 0;
         display: block;
     }
 
-    .create-event-card .rz-inputtext {
+    .preview-image {
         width: 100%;
-        min-height: 48px !important;
-        height: 48px !important;
-        border: 1px solid #ced4da !important;
-        border-radius: 12px !important;
-        box-shadow: none !important;
-        background-color: #fff !important;
-        color: #212529 !important;
-        font-size: 1rem;
-        padding: 0.75rem 3rem 0.75rem 1rem !important;
+        max-height: 380px;
+        object-fit: cover;
+        border-radius: 16px;
+        border: 1px solid #e6edf7;
+        display: block;
     }
 
-        .create-event-card .rz-inputtext:focus,
-        .create-event-card .rz-state-focus .rz-inputtext,
-        .create-event-card .rz-datepicker:focus-within .rz-inputtext {
-            border-color: #86b7fe !important;
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
-            outline: none !important;
-        }
+    .action-bar {
+        margin-top: 0.5rem;
+    }
 
-    .create-event-card .rz-datepicker-trigger {
-        color: #6c757d !important;
-        background: transparent !important;
+    .create-btn,
+    .cancel-btn {
+        min-width: 170px;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    .create-btn {
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.20);
+    }
+
+    .state-card {
+        border-radius: 20px;
+        border: 1px solid #e8eef6;
+        box-shadow: 0 10px 25px rgba(31, 41, 55, 0.04);
+        padding: 1.25rem;
+    }
+
+    .state-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #24314f;
+    }
+
+    .state-subtitle {
+        color: #667085;
+        font-size: 0.92rem;
+        margin-top: 0.2rem;
+    }
+
+    .create-event-shell .rz-textbox,
+    .create-event-shell .rz-dropdown,
+    .create-event-shell .rz-datepicker,
+    .create-event-shell .rz-numeric {
+        width: 100%;
+        min-height: 54px;
+        border: 1px solid #d8e2f0 !important;
+        border-radius: 16px !important;
+        background: #fbfdff !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease;
+        overflow: hidden;
+    }
+
+    .create-event-shell .rz-textbox:focus-within,
+    .create-event-shell .rz-dropdown:focus-within,
+    .create-event-shell .rz-datepicker:focus-within,
+    .create-event-shell .rz-numeric:focus-within {
+        border-color: #7aa7ff !important;
+        background: #fff !important;
+        box-shadow: 0 0 0 0.22rem rgba(37, 99, 235, 0.12) !important;
+    }
+
+    .create-event-shell input.rz-inputtext,
+    .create-event-shell input.rz-numeric-input {
         border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        min-height: 52px !important;
+        height: 52px !important;
+        padding-left: 0rem !important;
+        padding-right: 1.15rem !important;
+        font-size: 1rem;
+        color: #1f2937 !important;
+        box-sizing: border-box !important;
+    }
+
+    .create-event-shell input.rz-inputtext::placeholder,
+    .create-event-shell input.rz-numeric-input::placeholder {
+        color: #6b7280 !important;
+        opacity: 1 !important;
+    }
+
+    .create-event-shell textarea.rz-inputtext {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        min-height: 180px !important;
+        height: auto !important;
+        padding: 1rem 1.15rem !important;
+        font-size: 1rem;
+        color: #1f2937 !important;
+        box-sizing: border-box !important;
+        resize: vertical;
+    }
+
+    .create-event-shell textarea.rz-inputtext::placeholder {
+        color: #6b7280 !important;
+        opacity: 1 !important;
+    }
+
+    .create-event-shell .rz-dropdown-label {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        min-height: 52px !important;
+        height: 52px !important;
+        line-height: 52px !important;
+        padding: 0 1.15rem !important;
+        font-size: 1rem;
+        color: #1f2a44 !important;
+        text-align: left !important;
+        box-sizing: border-box !important;
+        display: block !important;
+    }
+
+    .create-event-shell .rz-dropdown-trigger,
+    .create-event-shell .rz-datepicker-trigger {
+        border: none !important;
+        background: transparent !important;
+        color: #64748b !important;
         width: 48px !important;
         min-width: 48px !important;
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
     }
 
-        .create-event-card .rz-datepicker-trigger:hover {
-            color: #495057 !important;
-            background: transparent !important;
-        }
+    .create-event-shell .rz-numeric-button {
+        border: none !important;
+        background: transparent !important;
+        color: #64748b !important;
+        width: 34px !important;
+    }
 
-    .create-event-card .text-danger {
-        font-size: 0.92rem;
+    .create-event-shell .rz-numeric {
+        display: flex;
+        align-items: stretch;
+    }
+
+    .create-event-shell .time-dropdown .rz-dropdown-label {
+        text-align: left !important;
+        line-height: 52px !important;
+        padding-left: 1.15rem !important;
+        padding-right: 1.15rem !important;
+    }
+
+    .create-event-shell .time-dropdown .rz-dropdown-trigger {
+        border-left: none !important;
+    }
+
+    .create-event-shell .rz-datepicker-popup {
+        border: 1px solid #e5eaf3 !important;
+        border-radius: 18px !important;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14) !important;
+        overflow: hidden;
+    }
+
+    .create-event-shell .rz-calendar {
+        border: none !important;
+    }
+
+    .create-event-shell .rz-datepicker-header {
+        background: #f8fbff !important;
+        border-bottom: 1px solid #eef2f7 !important;
+        padding: 0.75rem !important;
+    }
+
+    .create-event-shell .rz-calendar table td a,
+    .create-event-shell .rz-calendar table td span {
+        border-radius: 12px !important;
+    }
+
+    .create-event-shell .rz-state-highlight {
+        background: #2563eb !important;
+        color: white !important;
+    }
+
+    .create-event-shell .rz-calendar table td a:hover {
+        background: #eef4ff !important;
     }
 </style>
 
@@ -272,11 +721,17 @@
     private bool isSubmitting = false;
 
     private string message = string.Empty;
-    private string messageCss = "alert-info";
     private string dateValidationMessage = string.Empty;
 
     private string googleMapsSearchUrl = string.Empty;
     private string googleMapsEmbedUrl = string.Empty;
+
+    private AlertStyle alertStyle = AlertStyle.Info;
+
+    private DateTime eventDateOnly = DateTime.Today.AddDays(1);
+    private string selectedTime = "18:00";
+
+    private DateTime minimumEventDate => DateTime.Now;
 
     private readonly List<string> categories = new()
     {
@@ -290,7 +745,7 @@
         "Other"
     };
 
-    private DateTime minimumEventDate => DateTime.Now;
+    private readonly List<TimeOption> timeOptions = GenerateTimeOptions();
 
     protected override async Task OnInitializedAsync()
     {
@@ -308,18 +763,26 @@
         }
 
         eventModel = existingEvent;
-        eventModel.Date = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
+
+        var localDateTime = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
+        eventDateOnly = localDateTime.Date;
+        selectedTime = localDateTime.ToString("HH:mm");
+
+        if (!timeOptions.Any(t => t.Value == selectedTime))
+        {
+            selectedTime = "18:00";
+        }
 
         UpdateMapUrl();
         isLoading = false;
     }
 
-    private void OnLocationChanged(ChangeEventArgs e)
+    private void OnLocationChanged(object value)
     {
         if (eventModel == null)
             return;
 
-        eventModel.Location = e.Value?.ToString() ?? string.Empty;
+        eventModel.Location = value?.ToString() ?? string.Empty;
         UpdateMapUrl();
     }
 
@@ -332,21 +795,32 @@
         googleMapsEmbedUrl = $"https://www.google.com/maps?q={encodedLocation}&output=embed";
     }
 
+    private void OpenGoogleMaps()
+    {
+        if (!string.IsNullOrWhiteSpace(googleMapsSearchUrl))
+        {
+            NavigationManager.NavigateTo(googleMapsSearchUrl, forceLoad: true);
+        }
+    }
+
     private async Task HandleEditEvent()
     {
-        if (eventModel == null)
+        if (eventModel == null || isSubmitting)
             return;
 
         isSubmitting = true;
         message = string.Empty;
-        messageCss = "alert-info";
         dateValidationMessage = string.Empty;
+        alertStyle = AlertStyle.Info;
 
         try
         {
+            eventModel.Date = CombineDateAndTime(eventDateOnly, selectedTime);
+
             if (eventModel.Date <= DateTime.Now)
             {
-                dateValidationMessage = "Event date must be in the future.";
+                dateValidationMessage = "Event date and time must be in the future.";
+                alertStyle = AlertStyle.Danger;
                 return;
             }
 
@@ -355,7 +829,6 @@
             var localEventDate = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Local);
             eventModel.Date = localEventDate.ToUniversalTime();
 
-            // When manager edits a flagged event, send it for admin review again
             if (eventModel.Status == "Flagged")
             {
                 eventModel.Status = "PendingReview";
@@ -365,7 +838,7 @@
             await Db.SaveChangesAsync();
 
             message = "Event updated successfully.";
-            messageCss = "alert-success";
+            alertStyle = AlertStyle.Success;
 
             await Task.Delay(600);
             NavigationManager.NavigateTo("/my-events");
@@ -373,7 +846,7 @@
         catch (Exception ex)
         {
             message = ex.Message;
-            messageCss = "alert-danger";
+            alertStyle = AlertStyle.Danger;
         }
         finally
         {
@@ -384,5 +857,43 @@
     private void GoBack()
     {
         NavigationManager.NavigateTo("/my-events");
+    }
+
+    private static DateTime CombineDateAndTime(DateTime date, string time)
+    {
+        if (TimeSpan.TryParse(time, out var parsedTime))
+        {
+            return date.Date.Add(parsedTime);
+        }
+
+        return date.Date.AddHours(18);
+    }
+
+    private static List<TimeOption> GenerateTimeOptions()
+    {
+        var result = new List<TimeOption>();
+
+        for (int hour = 0; hour < 24; hour++)
+        {
+            foreach (var minute in new[] { 0, 30 })
+            {
+                var time = new TimeSpan(hour, minute, 0);
+                var label = time.ToString(@"hh\:mm");
+
+                result.Add(new TimeOption
+                {
+                    Value = label,
+                    Label = label
+                });
+            }
+        }
+
+        return result;
+    }
+
+    private class TimeOption
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
     }
 }

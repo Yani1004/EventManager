@@ -6,6 +6,7 @@
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <div class="app-sidebar @(isCollapsed ? "collapsed" : "")">
     <RadzenCard class="sidebar-card">
@@ -63,34 +64,38 @@
                 @if (!isCollapsed)
                 {
                     <RadzenPanelMenu ShowArrow="false" Multiple="true" class="menu-full">
-                        <RadzenPanelMenuItem Text="Home" Icon="home" Path="" />
-                        <RadzenPanelMenuItem Text="Events" Icon="calendar_month" Path="events" />
+
+                        @if (!isAdmin)
+                        {
+                            <RadzenPanelMenuItem Text="Home" Icon="home" Path="" Match="NavLinkMatch.All" />
+                            <RadzenPanelMenuItem Text="Events" Icon="calendar_month" Path="events" Match="NavLinkMatch.All" />
+                        }
 
                         <AuthorizeView>
                             <NotAuthorized>
-                                <RadzenPanelMenuItem Text="Register" Icon="person_add" Path="register" />
+                                <RadzenPanelMenuItem Text="Register" Icon="person_add" Path="register" Match="NavLinkMatch.All" />
                             </NotAuthorized>
                         </AuthorizeView>
 
                         <AuthorizeView Roles="Attendee">
                             <Authorized>
-                                <RadzenPanelMenuItem Text="My Registrations" Icon="fact_check" Path="my-registrations" />
+                                <RadzenPanelMenuItem Text="My Registrations" Icon="fact_check" Path="my-registrations" Match="NavLinkMatch.All" />
                             </Authorized>
                         </AuthorizeView>
 
                         <AuthorizeView Roles="EventManager">
                             <Authorized>
-                                <RadzenPanelMenuItem Text="Create Event" Icon="add_circle" Path="events/create" />
-                                <RadzenPanelMenuItem Text="My Events" Icon="folder_open" Path="my-events" />
+                                <RadzenPanelMenuItem Text="Create Event" Icon="add_circle" Path="events/create" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="My Events" Icon="folder_open" Path="my-events" Match="NavLinkMatch.All" />
                             </Authorized>
                         </AuthorizeView>
 
                         <AuthorizeView Roles="Admin">
                             <Authorized>
-                                <RadzenPanelMenuItem Text="Admin Panel" Icon="admin_panel_settings" Path="admin" />
-                                <RadzenPanelMenuItem Text="Approvals" Icon="how_to_reg" Path="admin/approvals" />
-                                <RadzenPanelMenuItem Text="Users" Icon="groups" Path="admin/users" />
-                                <RadzenPanelMenuItem Text="Manage Events" Icon="event_available" Path="admin/events" />
+                                <RadzenPanelMenuItem Text="Admin Panel" Icon="admin_panel_settings" Path="admin" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Approvals" Icon="how_to_reg" Path="admin/approvals" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Users" Icon="groups" Path="admin/users" Match="NavLinkMatch.All" />
+                                <RadzenPanelMenuItem Text="Manage Events" Icon="event_available" Path="admin/events" Match="NavLinkMatch.All" />
                             </Authorized>
                         </AuthorizeView>
                     </RadzenPanelMenu>
@@ -99,17 +104,21 @@
                 {
                     <div class="collapsed-inner">
                         <RadzenStack Orientation="Orientation.Vertical" Gap="0.85rem" class="menu-collapsed">
-                            <RadzenButton Icon="home"
-                                          Variant="Variant.Flat"
-                                          ButtonStyle="ButtonStyle.Light"
-                                          class="collapsed-nav-btn"
-                                          Click='@(() => NavigateTo(""))' />
 
-                            <RadzenButton Icon="calendar_month"
-                                          Variant="Variant.Flat"
-                                          ButtonStyle="ButtonStyle.Light"
-                                          class="collapsed-nav-btn"
-                                          Click='@(() => NavigateTo("events"))' />
+                            @if (!isAdmin)
+                            {
+                                <RadzenButton Icon="home"
+                                              Variant="Variant.Flat"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              class="collapsed-nav-btn"
+                                              Click='@(() => NavigateTo(""))' />
+
+                                <RadzenButton Icon="calendar_month"
+                                              Variant="Variant.Flat"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              class="collapsed-nav-btn"
+                                              Click='@(() => NavigateTo("events"))' />
+                            }
 
                             <AuthorizeView>
                                 <NotAuthorized>
@@ -191,14 +200,17 @@
                             <RadzenStack Orientation="Orientation.Horizontal"
                                          AlignItems="AlignItems.Center"
                                          Gap="0.85rem">
-                                <RadzenAvatar Text="@GetInitials(displayName)" class="profile-avatar" />
+
+                                <div class="profile-avatar">
+                                    <RadzenIcon Icon="account_circle" class="profile-avatar-icon" />
+                                </div>
 
                                 <div class="profile-copy">
                                     <div class="profile-name">@displayName</div>
-                                    <RadzenBadge Text="@userRole"
-                                                 Variant="Variant.Flat"
-                                                 Shade="Shade.Light"
-                                                 class="profile-role" />
+
+                                    <div class="profile-role">
+                                        <span>@userRole</span>
+                                    </div>
                                 </div>
                             </RadzenStack>
                         </div>
@@ -225,10 +237,10 @@
         box-sizing: border-box;
     }
 
-        .app-sidebar.collapsed {
-            width: 120px;
-            min-width: 120px;
-        }
+    .app-sidebar.collapsed {
+        width: 120px;
+        min-width: 120px;
+    }
 
     .sidebar-card {
         height: calc(100vh - 2rem);
@@ -397,11 +409,20 @@
     .profile-avatar {
         width: 44px;
         height: 44px;
-        background: linear-gradient(135deg, #7c66ff 0%, #5b6df9 100%) !important;
-        color: white !important;
-        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #7c66ff 0%, #5b6df9 100%);
+        color: white;
         flex-shrink: 0;
-        border-radius: 14px !important;
+        border-radius: 14px;
+        box-shadow: 0 8px 18px rgba(91, 109, 249, 0.25);
+    }
+
+    .profile-avatar-icon {
+        color: white;
+        font-size: 28px;
+        line-height: 1;
     }
 
     .profile-copy {
@@ -419,8 +440,16 @@
     }
 
     .profile-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
         border-radius: 999px;
         font-weight: 600;
+        font-size: 0.85rem;
+        background: #eef2ff;
+        color: #4254d8;
+        width: fit-content;
     }
 
     .w-100 {
@@ -430,13 +459,15 @@
 
 @code {
     private bool isCollapsed = false;
+    private bool initialized = false;
     private string displayName = "";
     private string userRole = "";
+    private bool isAdmin = false;
 
     private async Task ToggleSidebar()
     {
         isCollapsed = !isCollapsed;
-        await SetBodySidebarState();
+        await SaveAndApplySidebarState();
     }
 
     protected override async Task OnInitializedAsync()
@@ -447,6 +478,7 @@
         if (user.Identity?.IsAuthenticated == true)
         {
             displayName = user.Identity.Name ?? "User";
+            isAdmin = user.IsInRole("Admin");
 
             if (user.IsInRole("Admin"))
                 userRole = "Admin";
@@ -461,17 +493,24 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !initialized)
         {
-            await SetBodySidebarState();
+            initialized = true;
+            isCollapsed = await JS.InvokeAsync<bool>("sidebarState.get");
+            await ApplySidebarState();
+            StateHasChanged();
         }
     }
 
-    private async Task SetBodySidebarState()
+    private async Task SaveAndApplySidebarState()
     {
-        await JS.InvokeVoidAsync("eval", isCollapsed
-            ? "document.body.classList.add('sidebar-collapsed')"
-            : "document.body.classList.remove('sidebar-collapsed')");
+        await JS.InvokeVoidAsync("sidebarState.set", isCollapsed);
+        await ApplySidebarState();
+    }
+
+    private async Task ApplySidebarState()
+    {
+        await JS.InvokeVoidAsync("sidebarState.applyBodyClass", isCollapsed);
     }
 
     private void NavigateTo(string url)

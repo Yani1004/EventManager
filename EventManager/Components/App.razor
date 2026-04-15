@@ -16,7 +16,23 @@
 
     <HeadOutlet />
 </head>
-
+<script>
+    window.sidebarState = {
+    get: function () {
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+    },
+    set: function (value) {
+    localStorage.setItem('sidebar-collapsed', value);
+    },
+    applyBodyClass: function (collapsed) {
+    if (collapsed) {
+    document.body.classList.add('sidebar-collapsed');
+    } else {
+    document.body.classList.remove('sidebar-collapsed');
+    }
+    }
+    };
+</script>
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>

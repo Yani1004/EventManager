@@ -5,154 +5,320 @@
 @using EventManager.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
 
 @inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
 
 <PageTitle>All Users</PageTitle>
 
-<div class="container py-4">
+<RadzenStack Gap="1.5rem" class="users-page">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="fw-bold mb-1">All Users</h1>
-            <p class="text-muted mb-0">View all registered users and their current roles.</p>
-        </div>
+    <RadzenCard class="users-hero-card">
+        <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+            <RadzenColumn Size="12" SizeMD="8">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                    <div class="users-hero-icon">
+                        <RadzenIcon Icon="groups" />
+                    </div>
 
-        <a href="/admin" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Back to dashboard
-        </a>
-    </div>
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1" class="mb-0">
+                            All Users
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="users-subtitle">
+                            View all registered users, their requested role, approval status, and current permissions.
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenColumn>
 
-    @if (!string.IsNullOrWhiteSpace(Message))
-    {
-        <div class="alert @messageCss alert-dismissible fade show">
-            @Message
-            <button class="btn-close" @onclick="ClearMessage"></button>
-        </div>
-    }
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             JustifyContent="JustifyContent.End"
+                             class="w-100">
+                    <RadzenButton Text="Back to Dashboard"
+                                  Icon="arrow_back"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Variant="Variant.Outlined"
+                                  Size="ButtonSize.Large"
+                                  Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
 
     @if (isLoading)
     {
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="spinner-border text-primary"></div>
-                    <span>Loading users...</span>
-                </div>
-            </div>
-        </div>
+        <RadzenCard class="loading-card">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.Center"
+                         Gap="1rem"
+                         class="py-4">
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Medium" />
+                <RadzenText TextStyle="TextStyle.Body1">Loading users...</RadzenText>
+            </RadzenStack>
+        </RadzenCard>
     }
     else
     {
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-0">
+        <RadzenRow Gap="1rem">
+            <RadzenColumn Size="12" SizeLG="3">
+                <RadzenCard class="stat-card stat-card-dark">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Overline" class="stat-label">Total Users</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="stat-value">@users.Count</RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+            <RadzenColumn Size="12" SizeLG="3">
+                <RadzenCard class="stat-card stat-card-primary">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Overline" class="stat-label">Pending Requests</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="stat-value">
+                            @users.Count(u => u.RequestedRole == "EventManager" && !u.IsApproved)
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-                        <thead class="table-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Requested Role</th>
-                                <th>Status</th>
-                                <th>Current Role</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
+            <RadzenColumn Size="12" SizeLG="3">
+                <RadzenCard class="stat-card stat-card-success">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Overline" class="stat-label">Event Managers</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="stat-value">
+                            @users.Count(u => u.CurrentRole == "EventManager")
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
 
-                        <tbody>
+            <RadzenColumn Size="12" SizeLG="3">
+                <RadzenCard class="stat-card stat-card-muted">
+                    <RadzenStack Gap="0.35rem">
+                        <RadzenText TextStyle="TextStyle.Overline" class="stat-label">Attendees</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="stat-value">
+                            @users.Count(u => u.CurrentRole == "Attendee")
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
 
-                            @for (int i = 0; i < users.Count; i++)
-                            {
-                                var user = users[i];
+        <RadzenCard class="grid-card">
+            <RadzenStack Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             JustifyContent="JustifyContent.SpaceBetween"
+                             class="grid-header">
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.H6">User Directory</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="users-subtitle">
+                            This page is read-only. Pending manager requests are handled from the approvals page.
+                        </RadzenText>
+                    </RadzenStack>
 
-                                <tr>
-                                    <td>@(i + 1)</td>
+                    <RadzenButton Text="Open Approvals"
+                                  Icon="fact_check"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Variant="Variant.Flat"
+                                  Click="@(() => NavigationManager.NavigateTo("/admin/approvals"))" />
+                </RadzenStack>
 
-                                    <td>@user.FullName</td>
+                <RadzenDataGrid Data="@users"
+                                TItem="UserListItemViewModel"
+                                AllowPaging="true"
+                                PageSize="10"
+                                AllowSorting="true"
+                                Responsive="true"
+                                EmptyText="No users found."
+                                GridLines="DataGridGridLines.None"
+                                class="users-grid">
 
-                                    <td>@user.Email</td>
+                    <Columns>
+                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="#" Width="70px" Sortable="false">
+                            <Template Context="user">
+                                @(users.IndexOf(user) + 1)
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                    <td>
-                                        @(user.RequestedRole == "Attendee"
-                                            ? "-"
-                                            : user.RequestedRole)
-                                    </td>
+                        <RadzenDataGridColumn TItem="UserListItemViewModel" Property="FullName" Title="Name" Width="250px">
+                            <Template Context="user">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                                    <div class="user-avatar">
+                                        @GetInitials(user.FullName)
+                                    </div>
+                                    <RadzenStack Gap="0.15rem">
+                                        <RadzenText TextStyle="TextStyle.Body1" class="user-name">@user.FullName</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" class="user-email">@user.Email</RadzenText>
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                    <td>
+                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Requested Role" Width="160px" Sortable="false">
+                            <Template Context="user">
+                                <RadzenBadge Text="@GetRequestedRoleText(user)"
+                                             BadgeStyle="@GetRequestedRoleBadgeStyle(user)"
+                                             Shade="Shade.Light"
+                                             Variant="Variant.Flat" />
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                        @if (user.RequestedRole == "EventManager" && !user.IsApproved)
-                                        {
-                                            <span class="badge bg-warning text-dark">Pending</span>
-                                        }
-                                        else if (user.RequestedRole == "EventManager" && user.IsApproved)
-                                        {
-                                            <span class="badge bg-success">Approved</span>
-                                        }
-                                        else if (user.RequestedRole == "Rejected")
-                                        {
-                                            <span class="badge bg-danger">Rejected</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Attendee</span>
-                                        }
+                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Status" Width="150px" Sortable="false">
+                            <Template Context="user">
+                                <RadzenBadge Text="@GetStatusText(user)"
+                                             BadgeStyle="@GetStatusBadgeStyle(user)"
+                                             Shade="Shade.Light"
+                                             Variant="Variant.Flat" />
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                    </td>
-
-                                    <td>
-                                        <span class="badge @GetRoleBadgeClass(user.CurrentRole)">
-                                            @user.CurrentRole
-                                        </span>
-                                    </td>
-
-                                    <td class="text-center">
-
-                                        @if (user.RequestedRole == "EventManager" && !user.IsApproved)
-                                        {
-                                            <button class="btn btn-success btn-sm me-2"
-                                                    disabled="@isProcessing"
-                                                    @onclick="() => ApproveUser(user.Id)">
-                                                <i class="bi bi-check-lg"></i>
-                                            </button>
-
-                                            <button class="btn btn-danger btn-sm"
-                                                    disabled="@isProcessing"
-                                                    @onclick="() => RejectUser(user.Id)">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted small">No actions</span>
-                                        }
-
-                                    </td>
-
-                                </tr>
-                            }
-
-                        </tbody>
-
-                    </table>
-                </div>
-
-            </div>
-        </div>
+                        <RadzenDataGridColumn TItem="UserListItemViewModel" Title="Current Role" Width="160px" Sortable="false">
+                            <Template Context="user">
+                                <RadzenBadge Text="@user.CurrentRole"
+                                             BadgeStyle="@GetCurrentRoleBadgeStyle(user.CurrentRole)"
+                                             Shade="Shade.Light"
+                                             Variant="Variant.Flat" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenStack>
+        </RadzenCard>
     }
 
-</div>
+</RadzenStack>
+
+<style>
+    .users-page {
+        padding: 1.5rem;
+    }
+
+    .users-hero-card,
+    .grid-card,
+    .loading-card,
+    .stat-card {
+        border: none !important;
+        border-radius: 24px !important;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    .users-hero-card {
+        padding: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    .users-hero-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        font-size: 1.8rem;
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+        flex-shrink: 0;
+    }
+
+    .users-subtitle {
+        color: #64748b;
+    }
+
+    .stat-card {
+        padding: 1.25rem;
+        color: white;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+    }
+
+    .stat-card-dark {
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+    }
+
+    .stat-card-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
+    .stat-card-success {
+        background: linear-gradient(135deg, #16a34a, #15803d);
+    }
+
+    .stat-card-muted {
+        background: linear-gradient(135deg, #475569, #334155);
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.78);
+        letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+        color: white;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .grid-card {
+        padding: 0.5rem;
+        background: #ffffff;
+    }
+
+    .grid-header {
+        padding: 0.75rem 0.75rem 0 0.75rem;
+    }
+
+    .user-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .user-email {
+        color: #64748b;
+    }
+
+    .users-grid .rz-datatable-tablewrapper table thead th {
+        background: #f8fafc !important;
+        color: #334155 !important;
+        font-weight: 700 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .users-grid .rz-cell-data {
+        color: #0f172a;
+    }
+
+    .users-grid .rz-datatable-data tr:hover {
+        background: #f8fbff !important;
+    }
+
+
+</style>
 
 @code {
-
     private List<UserListItemViewModel> users = new();
     private bool isLoading = true;
-    private bool isProcessing;
-
-    private string? Message;
-    private string messageCss = "alert-success";
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,7 +328,6 @@
     private async Task LoadUsers()
     {
         isLoading = true;
-
         users.Clear();
 
         var allUsers = await UserManager.Users
@@ -188,104 +353,75 @@
         isLoading = false;
     }
 
-    private async Task ApproveUser(string userId)
+    private string GetInitials(string fullName)
     {
-        isProcessing = true;
-        ClearMessage();
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "U";
 
-        var user = await UserManager.FindByIdAsync(userId);
+        var parts = fullName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(p => char.ToUpper(p[0]));
 
-        if (user == null)
-        {
-            ShowError("User not found.");
-            isProcessing = false;
-            return;
-        }
-
-        user.IsApproved = true;
-        user.RequestedRole = "EventManager";
-
-        await UserManager.UpdateAsync(user);
-
-        if (!await UserManager.IsInRoleAsync(user, "EventManager"))
-            await UserManager.AddToRoleAsync(user, "EventManager");
-
-        if (await UserManager.IsInRoleAsync(user, "Attendee"))
-            await UserManager.RemoveFromRoleAsync(user, "Attendee");
-
-        ShowSuccess($"User {user.Email} approved as Event Manager.");
-
-        await LoadUsers();
-
-        isProcessing = false;
+        return string.Concat(parts);
     }
 
-    private async Task RejectUser(string userId)
+    private string GetRequestedRoleText(UserListItemViewModel user)
     {
-        isProcessing = true;
-        ClearMessage();
+        if (string.IsNullOrWhiteSpace(user.RequestedRole) || user.RequestedRole == "Attendee")
+            return "None";
 
-        var user = await UserManager.FindByIdAsync(userId);
-
-        if (user == null)
-        {
-            ShowError("User not found.");
-            isProcessing = false;
-            return;
-        }
-
-        // Reject manager request
-        user.RequestedRole = "Rejected";
-        user.IsApproved = false;
-
-        var updateResult = await UserManager.UpdateAsync(user);
-
-        if (!updateResult.Succeeded)
-        {
-            ShowError(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
-            isProcessing = false;
-            return;
-        }
-
-        // Ensure user remains Attendee
-        if (!await UserManager.IsInRoleAsync(user, "Attendee"))
-            await UserManager.AddToRoleAsync(user, "Attendee");
-
-        // Remove manager role
-        if (await UserManager.IsInRoleAsync(user, "EventManager"))
-            await UserManager.RemoveFromRoleAsync(user, "EventManager");
-
-        ShowSuccess($"User {user.Email} request rejected.");
-
-        await LoadUsers();
-
-        isProcessing = false;
+        return user.RequestedRole;
     }
 
-    private string GetRoleBadgeClass(string role) => role switch
+    private BadgeStyle GetRequestedRoleBadgeStyle(UserListItemViewModel user)
     {
-        "Admin" => "bg-dark",
-        "EventManager" => "bg-primary",
-        "Attendee" => "bg-secondary",
-        _ => "bg-light text-dark"
+        if (string.IsNullOrWhiteSpace(user.RequestedRole) || user.RequestedRole == "Attendee")
+            return BadgeStyle.Secondary;
+
+        return user.RequestedRole switch
+        {
+            "EventManager" => BadgeStyle.Warning,
+            "Rejected" => BadgeStyle.Danger,
+            _ => BadgeStyle.Secondary
+        };
+    }
+
+    private string GetStatusText(UserListItemViewModel user)
+    {
+        if (user.RequestedRole == "EventManager" && !user.IsApproved)
+            return "Pending";
+
+        if (user.RequestedRole == "EventManager" && user.IsApproved)
+            return "Approved";
+
+        if (user.RequestedRole == "Rejected")
+            return "Rejected";
+
+        return "Attendee";
+    }
+
+    private BadgeStyle GetStatusBadgeStyle(UserListItemViewModel user)
+    {
+        if (user.RequestedRole == "EventManager" && !user.IsApproved)
+            return BadgeStyle.Warning;
+
+        if (user.RequestedRole == "EventManager" && user.IsApproved)
+            return BadgeStyle.Success;
+
+        if (user.RequestedRole == "Rejected")
+            return BadgeStyle.Danger;
+
+        return BadgeStyle.Secondary;
+    }
+
+    private BadgeStyle GetCurrentRoleBadgeStyle(string role) => role switch
+    {
+        "Admin" => BadgeStyle.Dark,
+        "EventManager" => BadgeStyle.Primary,
+        "Attendee" => BadgeStyle.Secondary,
+        _ => BadgeStyle.Secondary
     };
-
-    private void ShowSuccess(string message)
-    {
-        Message = message;
-        messageCss = "alert-success";
-    }
-
-    private void ShowError(string message)
-    {
-        Message = message;
-        messageCss = "alert-danger";
-    }
-
-    private void ClearMessage()
-    {
-        Message = null;
-    }
 
     public class UserListItemViewModel
     {
@@ -296,5 +432,4 @@
         public bool IsApproved { get; set; }
         public string CurrentRole { get; set; } = "";
     }
-
 }
