@@ -10,11 +10,19 @@ namespace EventManager.Services
 	{
 		private readonly ApplicationDbContext _db;
 		private readonly UserManager<ApplicationUser> _userManager;
+		private readonly IPaymentService _paymentService;
+		private readonly ITicketService _ticketService;
 
-		public RegistrationService(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+		public RegistrationService(
+			ApplicationDbContext db,
+			UserManager<ApplicationUser> userManager,
+			IPaymentService paymentService,
+			ITicketService ticketService)
 		{
 			_db = db;
 			_userManager = userManager;
+			_paymentService = paymentService;
+			_ticketService = ticketService;
 		}
 
 		public async Task<int> GetRegisteredCountAsync(int eventId)
@@ -26,6 +34,7 @@ namespace EventManager.Services
 		{
 			return await _db.Registrations
 				.Include(r => r.Ticket)
+				.Include(r => r.Payment)
 				.Include(r => r.Event)
 					.ThenInclude(e => e.EventStatus)
 				.FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId);
@@ -44,36 +53,18 @@ namespace EventManager.Services
 					EventImageUrl = r.Event.ImageUrl,
 					EventLocation = r.Event.Location,
 					EventDate = r.Event.Date,
-					RegisteredAt = r.RegisteredAt,
-					Price = r.Event.Price,
-					CategoryName = r.Event.EventCategory.Name,
-					TicketNumber = r.Ticket != null ? r.Ticket.TicketNumber : null,
-					VerificationCode = r.Ticket != null ? r.Ticket.VerificationCode : null
-				})
+						RegisteredAt = r.RegisteredAt,
+						Price = r.Event.Price,
+						CategoryName = r.Event.EventCategory.Name,
+						TicketNumber = r.Ticket != null ? r.Ticket.TicketNumber : null,
+						VerificationCode = r.Ticket != null ? r.Ticket.VerificationCode : null,
+						PaymentMethod = r.Payment != null ? r.Payment.PaymentMethod : null,
+						PaymentStatus = r.Payment != null ? r.Payment.PaymentStatus : null
+					})
 				.ToListAsync();
 		}
 
-		public async Task<TicketDetailsDto?> GetTicketDetailsAsync(int registrationId, string userId)
-		{
-			return await _db.Registrations
-				.Where(r => r.Id == registrationId && r.UserId == userId)
-				.Select(r => new TicketDetailsDto
-				{
-					RegistrationId = r.Id,
-					EventId = r.EventId,
-					EventTitle = r.Event.Title,
-					EventLocation = r.Event.Location,
-					EventDate = r.Event.Date,
-					Price = r.Event.Price,
-					RegisteredAt = r.RegisteredAt,
-					CategoryName = r.Event.EventCategory.Name,
-					TicketNumber = r.Ticket != null ? r.Ticket.TicketNumber : null,
-					VerificationCode = r.Ticket != null ? r.Ticket.VerificationCode : null
-				})
-				.FirstOrDefaultAsync();
-		}
-
-		public async Task<ServiceResult> CompleteRegistrationAsync(int eventId, string userId)
+		public async Task<ServiceResult> CompleteRegistrationAsync(int eventId, string userId, RegistrationCheckoutRequest checkoutRequest)
 		{
 			var eventItem = await _db.Events
 				.Include(e => e.EventStatus)
@@ -114,6 +105,11 @@ namespace EventManager.Services
 				return ServiceResult.Fail("Registration status not found.");
 			}
 
+			if (eventItem.Price > 0 && string.IsNullOrWhiteSpace(checkoutRequest.PaymentMethod))
+			{
+				return ServiceResult.Fail("Payment method is required.");
+			}
+
 			var registration = new Registration
 			{
 				EventId = eventId,
@@ -125,16 +121,8 @@ namespace EventManager.Services
 			_db.Registrations.Add(registration);
 			await _db.SaveChangesAsync();
 
-			var ticket = new Ticket
-			{
-				RegistrationId = registration.Id,
-				TicketNumber = GenerateTicketNumber(),
-				IssuedAt = DateTime.UtcNow,
-				VerificationCode = GenerateVerificationCode()
-			};
-
-			_db.Tickets.Add(ticket);
-			await _db.SaveChangesAsync();
+			await _paymentService.CreatePaymentAsync(registration.Id, eventItem.Price, checkoutRequest);
+			await _ticketService.IssueTicketAsync(registration.Id);
 
 			return ServiceResult.Ok(eventItem.Price > 0
 				? "Payment successful. Your ticket is confirmed."
@@ -193,14 +181,5 @@ namespace EventManager.Services
 			return result;
 		}
 
-		private static string GenerateTicketNumber()
-		{
-			return $"TKT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..26];
-		}
-
-		private static string GenerateVerificationCode()
-		{
-			return Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-		}
 	}
 }

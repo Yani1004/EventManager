@@ -175,6 +175,14 @@
                                         <span>Registered On</span>
                                         <strong>@registration.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
                                     </div>
+                                    <div class="summary-row">
+                                        <span>Payment Method</span>
+                                        <strong>@(registration.Payment?.PaymentMethod ?? "Not available")</strong>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Reference</span>
+                                        <strong>@(registration.Payment?.TransactionReference ?? "Not available")</strong>
+                                    </div>
                                 </RadzenStack>
 
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" Wrap="FlexWrap.Wrap">
@@ -211,7 +219,7 @@
                                             </RadzenText>
                                         </div>
 
-                                        @if (eventItem.Price > 0)
+                                        @if (eventItem.Price > 0 && RequiresCardDetails)
                                         {
                                             <div class="card-brands">
                                                 <span>VISA</span>
@@ -224,12 +232,21 @@
                                     @if (eventItem.Price > 0)
                                     {
                                         <div class="payment-method-panel">
+                                            <RadzenFormField Text="Payment Method" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                <RadzenDropDown Name="PaymentMethod"
+                                                                Data="@paymentMethods"
+                                                                TextProperty="Label"
+                                                                ValueProperty="Value"
+                                                                @bind-Value="paymentModel.PaymentMethod"
+                                                                class="w-100" />
+                                            </RadzenFormField>
+
                                             <div class="payment-method-active">
                                                 <div class="payment-method-copy">
-                                                    <RadzenIcon Icon="credit_card" class="method-icon" />
+                                                    <RadzenIcon Icon="@GetPaymentMethodIcon(paymentModel.PaymentMethod)" class="method-icon" />
                                                     <div>
-                                                        <strong>Credit or debit card</strong>
-                                                        <span>Pay securely and receive your ticket instantly.</span>
+                                                        <strong>@GetPaymentMethodLabel(paymentModel.PaymentMethod)</strong>
+                                                        <span>@GetPaymentMethodDescription(paymentModel.PaymentMethod)</span>
                                                     </div>
                                                 </div>
                                                 <div class="payment-method-check">
@@ -237,80 +254,79 @@
                                                 </div>
                                             </div>
 
-                                            <div class="card-visual">
-                                                <div class="card-chip"></div>
-                                                <div class="card-brand-mark">EVENT PASS</div>
-                                                <div class="card-number-preview">@GetCardPreview(paymentModel.CardNumber)</div>
-                                                <div class="card-meta">
-                                                    <div>
-                                                        <span>Cardholder</span>
-                                                        <strong>@(string.IsNullOrWhiteSpace(paymentModel.CardholderName) ? "Your Name" : paymentModel.CardholderName)</strong>
-                                                    </div>
-                                                    <div>
-                                                        <span>Expires</span>
-                                                        <strong>@(string.IsNullOrWhiteSpace(paymentModel.ExpiryDate) ? "MM/YY" : paymentModel.ExpiryDate)</strong>
+                                            @if (RequiresCardDetails)
+                                            {
+                                                <div class="card-visual">
+                                                    <div class="card-chip"></div>
+                                                    <div class="card-brand-mark">EVENT PASS</div>
+                                                    <div class="card-number-preview">@GetCardPreview(paymentModel.CardNumber)</div>
+                                                    <div class="card-meta">
+                                                        <div>
+                                                            <span>Cardholder</span>
+                                                            <strong>@(string.IsNullOrWhiteSpace(paymentModel.CardholderName) ? "Your Name" : paymentModel.CardholderName)</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span>Expires</span>
+                                                            <strong>@(string.IsNullOrWhiteSpace(paymentModel.ExpiryDate) ? "MM/YY" : paymentModel.ExpiryDate)</strong>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <RadzenRow Gap="1rem" RowGap="1rem">
-                                                <RadzenColumn Size="12">
-                                                    <RadzenFormField Text="Cardholder Name" Variant="Variant.Outlined" class="w-100 checkout-field">
-                                                        <RadzenTextBox Name="CardholderName"
-                                                                       Placeholder="Name as shown on card"
-                                                                       @bind-Value="paymentModel.CardholderName"
-                                                                       class="w-100" />
-                                                    </RadzenFormField>
-                                                    <RadzenRequiredValidator Component="CardholderName"
-                                                                             Text="Cardholder name is required."
-                                                                             Popup="false" />
-                                                </RadzenColumn>
+                                                <RadzenRow Gap="1rem" RowGap="1rem">
+                                                    <RadzenColumn Size="12">
+                                                        <RadzenFormField Text="Cardholder Name" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                            <RadzenTextBox Name="CardholderName"
+                                                                           Placeholder="Name as shown on card"
+                                                                           @bind-Value="paymentModel.CardholderName"
+                                                                           class="w-100" />
+                                                        </RadzenFormField>
+                                                    </RadzenColumn>
 
-                                                <RadzenColumn Size="12">
-                                                    <RadzenFormField Text="Card Number" Variant="Variant.Outlined" class="w-100 checkout-field">
-                                                        <div class="field-with-icon">
-                                                            <RadzenIcon Icon="credit_card" />
-                                                            <RadzenMask Name="CardNumber"
-                                                                        Mask="0000 0000 0000 0000"
-                                                                        Placeholder="1234 5678 9012 3456"
-                                                                        @bind-Value="paymentModel.CardNumber"
+                                                    <RadzenColumn Size="12">
+                                                        <RadzenFormField Text="Card Number" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                            <div class="field-with-icon">
+                                                                <RadzenIcon Icon="credit_card" />
+                                                                <RadzenMask Name="CardNumber"
+                                                                            Mask="0000 0000 0000 0000"
+                                                                            Placeholder="1234 5678 9012 3456"
+                                                                            @bind-Value="paymentModel.CardNumber"
+                                                                            class="w-100 payment-mask" />
+                                                            </div>
+                                                        </RadzenFormField>
+                                                    </RadzenColumn>
+
+                                                    <RadzenColumn Size="8">
+                                                        <RadzenFormField Text="Expiry" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                            <RadzenMask Name="ExpiryDate"
+                                                                        Mask="00/00"
+                                                                        Placeholder="MM/YY"
+                                                                        @bind-Value="paymentModel.ExpiryDate"
                                                                         class="w-100 payment-mask" />
-                                                        </div>
-                                                    </RadzenFormField>
-                                                    <RadzenRequiredValidator Component="CardNumber"
-                                                                             Text="Card number is required."
-                                                                             Popup="false" />
-                                                </RadzenColumn>
+                                                        </RadzenFormField>
+                                                    </RadzenColumn>
 
-                                                <RadzenColumn Size="8">
-                                                    <RadzenFormField Text="Expiry" Variant="Variant.Outlined" class="w-100 checkout-field">
-                                                        <RadzenMask Name="ExpiryDate"
-                                                                    Mask="00/00"
-                                                                    Placeholder="MM/YY"
-                                                                    @bind-Value="paymentModel.ExpiryDate"
-                                                                    class="w-100 payment-mask" />
-                                                    </RadzenFormField>
-                                                    <RadzenRequiredValidator Component="ExpiryDate"
-                                                                             Text="Expiry date is required."
-                                                                             Popup="false" />
-                                                </RadzenColumn>
-
-                                                <RadzenColumn Size="4">
-                                                    <RadzenFormField Text="CVV" Variant="Variant.Outlined" class="w-100 checkout-field">
-                                                        <div class="field-with-icon">
-                                                            <RadzenMask Name="Cvv"
-                                                                        Mask="000"
-                                                                        Placeholder="123"
-                                                                        @bind-Value="paymentModel.Cvv"
-                                                                        class="w-100 payment-mask" />
-                                                            <RadzenIcon Icon="info" title="3-digit code on the back of your card" />
-                                                        </div>
-                                                    </RadzenFormField>
-                                                    <RadzenRequiredValidator Component="Cvv"
-                                                                             Text="CVV is required."
-                                                                             Popup="false" />
-                                                </RadzenColumn>
-                                            </RadzenRow>
+                                                    <RadzenColumn Size="4">
+                                                        <RadzenFormField Text="CVV" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                            <div class="field-with-icon">
+                                                                <RadzenMask Name="Cvv"
+                                                                            Mask="000"
+                                                                            Placeholder="123"
+                                                                            @bind-Value="paymentModel.Cvv"
+                                                                            class="w-100 payment-mask" />
+                                                                <RadzenIcon Icon="info" title="3-digit code on the back of your card" />
+                                                            </div>
+                                                        </RadzenFormField>
+                                                    </RadzenColumn>
+                                                </RadzenRow>
+                                            }
+                                            else
+                                            {
+                                                <RadzenAlert AlertStyle="AlertStyle.Info"
+                                                             Variant="Variant.Flat"
+                                                             Shade="Shade.Light">
+                                                    @GetPaymentMethodDescription(paymentModel.PaymentMethod)
+                                                </RadzenAlert>
+                                            }
                                         </div>
                                     }
                                     else
@@ -770,6 +786,12 @@
     private Event? eventItem;
     private Registration? registration;
     private PaymentInputModel paymentModel = new();
+    private readonly List<PaymentMethodOption> paymentMethods =
+    [
+        new("Card", "Credit or Debit Card"),
+        new("BankTransfer", "Bank Transfer"),
+        new("Cash", "Cash at Venue")
+    ];
 
     private bool isLoading = true;
     private bool isSubmitting;
@@ -778,6 +800,7 @@
     private string currentUserId = string.Empty;
     private string message = string.Empty;
     private AlertStyle messageStyle = AlertStyle.Info;
+    private bool RequiresCardDetails => string.Equals(paymentModel.PaymentMethod, "Card", StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -842,7 +865,16 @@
                 return;
             }
 
-            var result = await RegistrationService.CompleteRegistrationAsync(eventItem.Id, currentUserId);
+            var checkoutRequest = new RegistrationCheckoutRequest
+            {
+                PaymentMethod = paymentModel.PaymentMethod,
+                CardholderName = paymentModel.CardholderName,
+                CardNumber = paymentModel.CardNumber,
+                ExpiryDate = paymentModel.ExpiryDate,
+                Cvv = paymentModel.Cvv
+            };
+
+            var result = await RegistrationService.CompleteRegistrationAsync(eventItem.Id, currentUserId, checkoutRequest);
 
             if (!result.Success)
             {
@@ -869,6 +901,18 @@
 
     private bool IsPaymentInputValid()
     {
+        if (!paymentModel.AcceptTerms)
+        {
+            message = "Please confirm the registration before continuing.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        if (!RequiresCardDetails)
+        {
+            return true;
+        }
+
         if (string.IsNullOrWhiteSpace(paymentModel.CardholderName))
         {
             message = "Please enter the cardholder name.";
@@ -899,13 +943,6 @@
             return false;
         }
 
-        if (!paymentModel.AcceptTerms)
-        {
-            message = "Please confirm the registration before continuing.";
-            messageStyle = AlertStyle.Warning;
-            return false;
-        }
-
         return true;
     }
 
@@ -929,6 +966,27 @@
 
     private static string GetPriceLabel(decimal price) => price == 0 ? "Free" : $"{price:F2} lv.";
 
+    private static string GetPaymentMethodLabel(string? paymentMethod) => paymentMethod switch
+    {
+        "BankTransfer" => "Bank Transfer",
+        "Cash" => "Cash at Venue",
+        _ => "Credit or Debit Card"
+    };
+
+    private static string GetPaymentMethodDescription(string? paymentMethod) => paymentMethod switch
+    {
+        "BankTransfer" => "Your payment is recorded as a completed bank transfer for this demo flow.",
+        "Cash" => "Your payment is recorded as cash at venue and linked to your registration.",
+        _ => "Pay securely and receive your ticket instantly."
+    };
+
+    private static string GetPaymentMethodIcon(string? paymentMethod) => paymentMethod switch
+    {
+        "BankTransfer" => "account_balance",
+        "Cash" => "payments",
+        _ => "credit_card"
+    };
+
     private static string GetCardPreview(string? cardNumber)
     {
         var digits = new string((cardNumber ?? string.Empty).Where(char.IsDigit).ToArray());
@@ -944,6 +1002,9 @@
     private sealed class PaymentInputModel
     {
         [Required]
+        public string PaymentMethod { get; set; } = "Card";
+
+        [Required]
         public string CardholderName { get; set; } = string.Empty;
 
         [Required]
@@ -957,4 +1018,6 @@
 
         public bool AcceptTerms { get; set; }
     }
+
+    private sealed record PaymentMethodOption(string Value, string Label);
 }

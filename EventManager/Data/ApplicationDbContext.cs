@@ -18,10 +18,13 @@ namespace EventManager.Data
 		public DbSet<EventStatus> EventStatuses { get; set; }
 		public DbSet<RegistrationStatus> RegistrationStatuses { get; set; }
 		public DbSet<Ticket> Tickets { get; set; }
+		public DbSet<Payment> Payments { get; set; }
 		public DbSet<EmailLog> EmailLogs { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder builder)
 		{
+			builder.HasDefaultSchema(DatabaseSchema.Name);
+
 			base.OnModelCreating(builder);
 
 			builder.Entity<EventCategory>()
@@ -38,6 +41,14 @@ namespace EventManager.Data
 
 			builder.Entity<Ticket>()
 				.HasIndex(x => x.TicketNumber)
+				.IsUnique();
+
+			builder.Entity<Payment>()
+				.HasIndex(x => x.RegistrationId)
+				.IsUnique();
+
+			builder.Entity<Payment>()
+				.HasIndex(x => x.TransactionReference)
 				.IsUnique();
 
 			builder.Entity<Event>()
@@ -78,6 +89,12 @@ namespace EventManager.Data
 				.HasOne(t => t.Registration)
 				.WithOne(r => r.Ticket)
 				.HasForeignKey<Ticket>(t => t.RegistrationId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			builder.Entity<Payment>()
+				.HasOne(p => p.Registration)
+				.WithOne(r => r.Payment)
+				.HasForeignKey<Payment>(p => p.RegistrationId)
 				.OnDelete(DeleteBehavior.Cascade);
 
 			builder.Entity<EventCategory>().HasData(

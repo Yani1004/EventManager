@@ -12,5 +12,8 @@ namespace EventManager.Models
 		public string CategoryName { get; set; } = string.Empty;
 		public string? TicketNumber { get; set; }
 		public string? VerificationCode { get; set; }
+		public string? PaymentMethod { get; set; }
+		public string? PaymentStatus { get; set; }
+		public string? TransactionReference { get; set; }
 	}
 }

@@ -44,7 +44,7 @@
                     </RadzenStack>
                 </div>
 
-                <RadzenDivider class="menu-divider" />
+                <div class="menu-divider" aria-hidden="true"></div>
             }
             else
             {
@@ -194,7 +194,7 @@
                 <Authorized>
                     @if (!isCollapsed)
                     {
-                        <RadzenDivider class="menu-divider" />
+                        <div class="menu-divider" aria-hidden="true"></div>
 
                         <div class="profile-block" @onclick='@(() => NavigateTo("profile"))'>
                             <RadzenStack Orientation="Orientation.Horizontal"
@@ -334,6 +334,9 @@
 
     .menu-divider {
         margin: 0 !important;
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(90deg, rgba(148, 163, 184, 0), rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0));
     }
 
     .sidebar-nav {

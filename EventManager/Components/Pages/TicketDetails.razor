@@ -10,7 +10,7 @@
 @using Radzen
 @using Radzen.Blazor
 
-@inject IRegistrationService RegistrationService
+@inject ITicketService TicketService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -142,11 +142,19 @@
                             <div class="info-list">
                                 <div class="info-row">
                                     <span>Status</span>
-                                    <strong>@(ticket.Price > 0 ? "Payment completed" : "Free ticket issued")</strong>
+                                    <strong>@(ticket.PaymentStatus ?? (ticket.Price > 0 ? "Payment completed" : "Free ticket issued"))</strong>
                                 </div>
                                 <div class="info-row">
                                     <span>Amount</span>
                                     <strong>@(ticket.Price > 0 ? $"{ticket.Price:F2} lv." : "Free")</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Method</span>
+                                    <strong>@(ticket.PaymentMethod ?? "Not available")</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Reference</span>
+                                    <strong>@(ticket.TransactionReference ?? "Not available")</strong>
                                 </div>
                                 <div class="info-row">
                                     <span>Registered On</span>
@@ -462,7 +470,7 @@
             return;
         }
 
-        ticket = await RegistrationService.GetTicketDetailsAsync(RegistrationId, userId);
+        ticket = await TicketService.GetTicketDetailsAsync(RegistrationId, userId);
 
         if (ticket?.TicketNumber is { Length: > 0 } ticketNumber)
         {

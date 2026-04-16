@@ -17,6 +17,7 @@ namespace EventManager.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("em_test")
                 .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -96,7 +97,7 @@ namespace EventManager.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.EmailLog", b =>
@@ -134,7 +135,7 @@ namespace EventManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EmailLogs");
+                    b.ToTable("EmailLogs", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.Event", b =>
@@ -195,7 +196,7 @@ namespace EventManager.Migrations
 
                     b.HasIndex("EventStatusId");
 
-                    b.ToTable("Events");
+                    b.ToTable("Events", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.EventCategory", b =>
@@ -215,7 +216,7 @@ namespace EventManager.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("EventCategories");
+                    b.ToTable("EventCategories", "em_test");
 
                     b.HasData(
                         new
@@ -277,7 +278,7 @@ namespace EventManager.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("EventStatuses");
+                    b.ToTable("EventStatuses", "em_test");
 
                     b.HasData(
                         new
@@ -300,6 +301,69 @@ namespace EventManager.Migrations
                             Id = 4,
                             Name = "Archived"
                         });
+                });
+
+            modelBuilder.Entity("EventManager.Models.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CardBrand")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("CardLast4")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.Property<string>("CardholderName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("RegistrationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RegistrationId")
+                        .IsUnique();
+
+                    b.HasIndex("TransactionReference")
+                        .IsUnique();
+
+                    b.ToTable("Payments", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.Registration", b =>
@@ -332,7 +396,7 @@ namespace EventManager.Migrations
                     b.HasIndex("EventId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("Registrations");
+                    b.ToTable("Registrations", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.RegistrationStatus", b =>
@@ -352,7 +416,7 @@ namespace EventManager.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("RegistrationStatuses");
+                    b.ToTable("RegistrationStatuses", "em_test");
 
                     b.HasData(
                         new
@@ -409,7 +473,7 @@ namespace EventManager.Migrations
                     b.HasIndex("TicketNumber")
                         .IsUnique();
 
-                    b.ToTable("Tickets");
+                    b.ToTable("Tickets", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -435,7 +499,7 @@ namespace EventManager.Migrations
                         .IsUnique()
                         .HasDatabaseName("RoleNameIndex");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("AspNetRoles", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -460,7 +524,7 @@ namespace EventManager.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaims", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -485,7 +549,7 @@ namespace EventManager.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaims", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -507,7 +571,7 @@ namespace EventManager.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogins", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -522,7 +586,7 @@ namespace EventManager.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("AspNetUserRoles", "em_test");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -541,7 +605,7 @@ namespace EventManager.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserTokens", "em_test");
                 });
 
             modelBuilder.Entity("EventManager.Models.Event", b =>
@@ -561,6 +625,17 @@ namespace EventManager.Migrations
                     b.Navigation("EventCategory");
 
                     b.Navigation("EventStatus");
+                });
+
+            modelBuilder.Entity("EventManager.Models.Payment", b =>
+                {
+                    b.HasOne("EventManager.Models.Registration", "Registration")
+                        .WithOne("Payment")
+                        .HasForeignKey("EventManager.Models.Payment", "RegistrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Registration");
                 });
 
             modelBuilder.Entity("EventManager.Models.Registration", b =>
@@ -669,6 +744,8 @@ namespace EventManager.Migrations
 
             modelBuilder.Entity("EventManager.Models.Registration", b =>
                 {
+                    b.Navigation("Payment");
+
                     b.Navigation("Ticket");
                 });
 

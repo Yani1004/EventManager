@@ -21,5 +21,6 @@ namespace EventManager.Models
 		public ApplicationUser User { get; set; } = null!;
 
 		public Ticket? Ticket { get; set; }
+		public Payment? Payment { get; set; }
 	}
 }

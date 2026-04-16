@@ -285,7 +285,7 @@
 
                     <RadzenDataGridColumn TItem="AdminEventListItem" Title="Actions">
                         <Template Context="ev">
-                            <RadzenWrap Gap="1rem">
+                            <div class="action-group">
                                 <RadzenButton Icon="visibility"
                                               ButtonStyle="ButtonStyle.Info"
                                               Variant="Variant.Outlined"
@@ -341,7 +341,7 @@
                                                   class="action-button"
                                                   title="Restore" />
                                 }
-                            </RadzenWrap>
+                            </div>
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>
@@ -497,6 +497,13 @@
     .clear-button,
     .action-button {
         border-radius: 14px !important;
+    }
+
+    .action-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
     }
 
     .admin-events-grid .rz-grid-table td,

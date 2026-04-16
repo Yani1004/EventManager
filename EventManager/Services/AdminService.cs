@@ -63,8 +63,8 @@ namespace EventManager.Services
 			{
 				Id = user.Id,
 				Email = user.Email ?? string.Empty,
-				FirstName = user.FirstName,
-				LastName = user.LastName,
+				FirstName = user.FirstName ?? string.Empty,
+				LastName = user.LastName ?? string.Empty,
 				RequestedRole = user.RequestedRole,
 				IsApproved = user.IsApproved
 			}).ToList();

@@ -162,12 +162,16 @@
                                                 <div>
                                                     <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Payment</RadzenText>
                                                     <RadzenText TextStyle="TextStyle.Body2" class="payment-status-text">
-                                                        @(reg.Price > 0 ? "Paid and confirmed" : "Free ticket issued")
+                                                        @(reg.PaymentStatus ?? (reg.Price > 0 ? "Completed" : "Free ticket issued"))
                                                     </RadzenText>
                                                 </div>
                                             </div>
 
                                             <div class="payment-meta">
+                                                <div class="payment-meta-row">
+                                                    <span>Method</span>
+                                                    <strong>@(reg.PaymentMethod ?? (reg.Price > 0 ? "Card" : "Free"))</strong>
+                                                </div>
                                                 <div class="payment-meta-row">
                                                     <span>Amount</span>
                                                     <strong>@(reg.Price > 0 ? $"{reg.Price:F2} lv." : "Free")</strong>
