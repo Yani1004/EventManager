@@ -3,14 +3,13 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Attendee")]
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IRegistrationService RegistrationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -94,17 +93,17 @@
                         <RadzenCard class="registration-card">
                             <RadzenStack Gap="0" class="registration-card-stack">
                                 <div class="image-wrap">
-                                    <img src="@(string.IsNullOrWhiteSpace(reg.Event?.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.Event!.ImageUrl)"
-                                         alt="@reg.Event?.Title"
+                                    <img src="@(string.IsNullOrWhiteSpace(reg.EventImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.EventImageUrl)"
+                                         alt="@reg.EventTitle"
                                          class="registration-image" />
-                                    <RadzenBadge Text="@reg.Event?.EventCategory?.Name"
+                                    <RadzenBadge Text="@reg.CategoryName"
                                                  class="category-badge" />
                                 </div>
 
                                 <RadzenStack Gap="0.85rem" class="registration-content">
                                     <RadzenStack Gap="0.35rem">
                                         <RadzenText TextStyle="TextStyle.H6" class="event-title">
-                                            @reg.Event?.Title
+                                            @reg.EventTitle
                                         </RadzenText>
 
                                         <RadzenText TextStyle="TextStyle.Body2" class="description-text">
@@ -122,7 +121,7 @@
                                             <RadzenStack Gap="0.15rem">
                                                 <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Event Date</RadzenText>
                                                 <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
-                                                    @reg.Event?.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                                    @reg.EventDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                                                 </RadzenText>
                                             </RadzenStack>
                                         </RadzenStack>
@@ -136,7 +135,7 @@
                                             <RadzenStack Gap="0.15rem">
                                                 <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Location</RadzenText>
                                                 <RadzenText TextStyle="TextStyle.Body2" class="detail-value">
-                                                    @reg.Event?.Location
+                                                    @reg.EventLocation
                                                 </RadzenText>
                                             </RadzenStack>
                                         </RadzenStack>
@@ -163,7 +162,7 @@
                                                 <div>
                                                     <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Payment</RadzenText>
                                                     <RadzenText TextStyle="TextStyle.Body2" class="payment-status-text">
-                                                        @(reg.Event?.Price > 0 ? "Paid and confirmed" : "Free ticket issued")
+                                                        @(reg.Price > 0 ? "Paid and confirmed" : "Free ticket issued")
                                                     </RadzenText>
                                                 </div>
                                             </div>
@@ -171,11 +170,11 @@
                                             <div class="payment-meta">
                                                 <div class="payment-meta-row">
                                                     <span>Amount</span>
-                                                    <strong>@(reg.Event?.Price > 0 ? $"{reg.Event?.Price:F2} lv." : "Free")</strong>
+                                                    <strong>@(reg.Price > 0 ? $"{reg.Price:F2} lv." : "Free")</strong>
                                                 </div>
                                                 <div class="payment-meta-row">
                                                     <span>Ticket</span>
-                                                    <strong>@(reg.Ticket?.TicketNumber ?? "Pending issue")</strong>
+                                                    <strong>@(reg.TicketNumber ?? "Pending issue")</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -189,7 +188,7 @@
                                                       Icon="confirmation_number"
                                                       ButtonStyle="ButtonStyle.Primary"
                                                       class="action-button"
-                                                      Click='@(() => NavigationManager.NavigateTo($"/my-registrations/{reg.Id}/ticket"))' />
+                                                      Click='@(() => NavigationManager.NavigateTo($"/my-registrations/{reg.RegistrationId}/ticket"))' />
 
                                         <RadzenButton Text="Event Details"
                                                       Icon="visibility"
@@ -203,7 +202,7 @@
                                                       Variant="Variant.Outlined"
                                                       ButtonStyle="ButtonStyle.Danger"
                                                       class="action-button"
-                                                      Click='@(() => CancelRegistration(reg.Id))' />
+                                                      Click='@(() => CancelRegistration(reg.RegistrationId))' />
                                     </RadzenStack>
                                 </RadzenStack>
                             </RadzenStack>
@@ -476,7 +475,7 @@
 </style>
 
 @code {
-    private List<Registration> registrations = new();
+    private List<MyRegistrationListItem> registrations = new();
     private bool isLoading = true;
 
     private string message = string.Empty;
@@ -497,19 +496,11 @@
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            registrations = await Db.Registrations
-                .Include(r => r.Event)
-                    .ThenInclude(e => e.EventCategory)
-                .Include(r => r.Event)
-                    .ThenInclude(e => e.EventStatus)
-                .Include(r => r.Ticket)
-                .Where(r => r.UserId == userId)
-                .OrderByDescending(r => r.RegisteredAt)
-                .ToListAsync();
+            registrations = await RegistrationService.GetUserRegistrationsAsync(userId);
         }
         else
         {
-            registrations = new List<Registration>();
+            registrations = new List<MyRegistrationListItem>();
         }
 
         isLoading = false;
@@ -530,20 +521,16 @@
             return;
         }
 
-        var registration = await Db.Registrations
-            .FirstOrDefaultAsync(r => r.Id == registrationId && r.UserId == userId);
+        var result = await RegistrationService.CancelRegistrationAsync(registrationId, userId);
 
-        if (registration == null)
+        if (!result.Success)
         {
-            message = "Registration not found.";
+            message = result.Message;
             messageStyle = AlertStyle.Danger;
             return;
         }
 
-        Db.Registrations.Remove(registration);
-        await Db.SaveChangesAsync();
-
-        message = "Registration cancelled successfully.";
+        message = result.Message;
         messageStyle = AlertStyle.Success;
 
         await LoadRegistrations();

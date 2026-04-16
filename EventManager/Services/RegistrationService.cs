@@ -31,6 +31,48 @@ namespace EventManager.Services
 				.FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId);
 		}
 
+		public async Task<List<MyRegistrationListItem>> GetUserRegistrationsAsync(string userId)
+		{
+			return await _db.Registrations
+				.Where(r => r.UserId == userId)
+				.OrderByDescending(r => r.RegisteredAt)
+				.Select(r => new MyRegistrationListItem
+				{
+					RegistrationId = r.Id,
+					EventId = r.EventId,
+					EventTitle = r.Event.Title,
+					EventImageUrl = r.Event.ImageUrl,
+					EventLocation = r.Event.Location,
+					EventDate = r.Event.Date,
+					RegisteredAt = r.RegisteredAt,
+					Price = r.Event.Price,
+					CategoryName = r.Event.EventCategory.Name,
+					TicketNumber = r.Ticket != null ? r.Ticket.TicketNumber : null,
+					VerificationCode = r.Ticket != null ? r.Ticket.VerificationCode : null
+				})
+				.ToListAsync();
+		}
+
+		public async Task<TicketDetailsDto?> GetTicketDetailsAsync(int registrationId, string userId)
+		{
+			return await _db.Registrations
+				.Where(r => r.Id == registrationId && r.UserId == userId)
+				.Select(r => new TicketDetailsDto
+				{
+					RegistrationId = r.Id,
+					EventId = r.EventId,
+					EventTitle = r.Event.Title,
+					EventLocation = r.Event.Location,
+					EventDate = r.Event.Date,
+					Price = r.Event.Price,
+					RegisteredAt = r.RegisteredAt,
+					CategoryName = r.Event.EventCategory.Name,
+					TicketNumber = r.Ticket != null ? r.Ticket.TicketNumber : null,
+					VerificationCode = r.Ticket != null ? r.Ticket.VerificationCode : null
+				})
+				.FirstOrDefaultAsync();
+		}
+
 		public async Task<ServiceResult> CompleteRegistrationAsync(int eventId, string userId)
 		{
 			var eventItem = await _db.Events

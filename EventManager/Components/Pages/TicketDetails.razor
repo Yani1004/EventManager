@@ -3,15 +3,14 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Attendee")]
 
 @using System.Security.Claims
-@using EventManager.Data
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
-@inject ApplicationDbContext Db
+@inject IRegistrationService RegistrationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -28,7 +27,7 @@
                 </RadzenStack>
             </RadzenCard>
         }
-        else if (registration == null || registration.Event == null)
+        else if (ticket == null)
         {
             <RadzenCard class="state-card">
                 <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
@@ -53,7 +52,7 @@
                 <div>
                     <div class="hero-kicker">Digital event pass</div>
                     <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="hero-title">
-                        @registration.Event.Title
+                        @ticket.EventTitle
                     </RadzenText>
                     <RadzenText TextStyle="TextStyle.Body1" class="hero-text">
                         Your ticket is confirmed and ready to present at the event.
@@ -70,7 +69,7 @@
                     <RadzenButton Text="Event Details"
                                   Icon="visibility"
                                   class="hero-button"
-                                  Click='@(() => NavigationManager.NavigateTo($"/events/{registration.EventId}"))' />
+                                  Click='@(() => NavigationManager.NavigateTo($"/events/{ticket.EventId}"))' />
                 </div>
             </div>
 
@@ -79,39 +78,39 @@
                     <RadzenCard class="ticket-card">
                         <div class="ticket-top">
                             <div class="ticket-category">
-                                @registration.Event.EventCategory?.Name
+                                @ticket.CategoryName
                             </div>
                             <div class="ticket-status">
-                                @(registration.Event.Price > 0 ? "Paid" : "Free")
+                                @(ticket.Price > 0 ? "Paid" : "Free")
                             </div>
                         </div>
 
                         <div class="ticket-main">
                             <div class="ticket-copy">
                                 <RadzenText TextStyle="TextStyle.H4" class="ticket-title">
-                                    @registration.Event.Title
+                                    @ticket.EventTitle
                                 </RadzenText>
                                 <RadzenText TextStyle="TextStyle.Body1" class="ticket-location">
-                                    @registration.Event.Location
+                                    @ticket.EventLocation
                                 </RadzenText>
                             </div>
 
                             <div class="ticket-grid">
                                 <div class="ticket-grid-item">
                                     <span>Date</span>
-                                    <strong>@registration.Event.Date.ToLocalTime().ToString("dd.MM.yyyy")</strong>
+                                    <strong>@ticket.EventDate.ToLocalTime().ToString("dd.MM.yyyy")</strong>
                                 </div>
                                 <div class="ticket-grid-item">
                                     <span>Time</span>
-                                    <strong>@registration.Event.Date.ToLocalTime().ToString("HH:mm")</strong>
+                                    <strong>@ticket.EventDate.ToLocalTime().ToString("HH:mm")</strong>
                                 </div>
                                 <div class="ticket-grid-item">
                                     <span>Ticket Number</span>
-                                    <strong>@registration.Ticket?.TicketNumber</strong>
+                                    <strong>@ticket.TicketNumber</strong>
                                 </div>
                                 <div class="ticket-grid-item">
                                     <span>Verification</span>
-                                    <strong>@registration.Ticket?.VerificationCode</strong>
+                                    <strong>@ticket.VerificationCode</strong>
                                 </div>
                             </div>
                         </div>
@@ -143,15 +142,15 @@
                             <div class="info-list">
                                 <div class="info-row">
                                     <span>Status</span>
-                                    <strong>@(registration.Event.Price > 0 ? "Payment completed" : "Free ticket issued")</strong>
+                                    <strong>@(ticket.Price > 0 ? "Payment completed" : "Free ticket issued")</strong>
                                 </div>
                                 <div class="info-row">
                                     <span>Amount</span>
-                                    <strong>@(registration.Event.Price > 0 ? $"{registration.Event.Price:F2} lv." : "Free")</strong>
+                                    <strong>@(ticket.Price > 0 ? $"{ticket.Price:F2} lv." : "Free")</strong>
                                 </div>
                                 <div class="info-row">
                                     <span>Registered On</span>
-                                    <strong>@registration.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
+                                    <strong>@ticket.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
                                 </div>
                             </div>
                         </RadzenCard>
@@ -172,7 +171,7 @@
                                 </div>
                                 <div class="entry-item">
                                     <RadzenIcon Icon="place" class="entry-icon" />
-                                    <span>@registration.Event.Location</span>
+                                    <span>@ticket.EventLocation</span>
                                 </div>
                             </div>
                         </RadzenCard>
@@ -439,7 +438,7 @@
     [Parameter]
     public int RegistrationId { get; set; }
 
-    private Registration? registration;
+    private TicketDetailsDto? ticket;
     private bool isLoading = true;
     private string barcodePattern = "1011010110111011010010110110101101";
 
@@ -458,18 +457,14 @@
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            registration = null;
+            ticket = null;
             isLoading = false;
             return;
         }
 
-        registration = await Db.Registrations
-            .Include(r => r.Event)
-                .ThenInclude(e => e.EventCategory)
-            .Include(r => r.Ticket)
-            .FirstOrDefaultAsync(r => r.Id == RegistrationId && r.UserId == userId);
+        ticket = await RegistrationService.GetTicketDetailsAsync(RegistrationId, userId);
 
-        if (registration?.Ticket?.TicketNumber is { Length: > 0 } ticketNumber)
+        if (ticket?.TicketNumber is { Length: > 0 } ticketNumber)
         {
             barcodePattern = BuildBarcodePattern(ticketNumber);
         }
