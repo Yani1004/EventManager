@@ -6,11 +6,14 @@
 @using System.Security.Claims
 @using Radzen
 @using Radzen.Blazor
+@using EventManager.Data
 @using EventManager.Models
 @using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
 
 @inject IEventService EventService
+@inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -94,12 +97,14 @@
                                     <label class="form-label">Category</label>
                                     <RadzenDropDown Name="Category"
                                                     Data="@categories"
-                                                    @bind-Value="eventModel.Category"
+                                                    TextProperty="Name"
+                                                    ValueProperty="Id"
+                                                    @bind-Value="eventModel.EventCategoryId"
                                                     Placeholder="Select a category"
                                                     AllowClear="true"
                                                     Style="width: 100%;"
                                                     class="rz-field" />
-                                    <ValidationMessage For="@(() => eventModel.Category)" class="validation-text" />
+                                    <ValidationMessage For="@(() => eventModel.EventCategoryId)" class="validation-text" />
                                 </RadzenStack>
                             </RadzenStack>
                         </RadzenCard>
@@ -445,18 +450,18 @@
         margin-bottom: 1rem;
     }
 
-    .preview-card-header h5 {
-        margin: 0 0 0.25rem 0;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #24314f;
-    }
+        .preview-card-header h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #24314f;
+        }
 
-    .preview-card-header p {
-        margin: 0;
-        color: #667085;
-        font-size: 0.92rem;
-    }
+        .preview-card-header p {
+            margin: 0;
+            color: #667085;
+            font-size: 0.92rem;
+        }
 
     .map-wrapper {
         border-radius: 16px;
@@ -508,14 +513,14 @@
         overflow: hidden;
     }
 
-    .create-event-shell .rz-textbox:focus-within,
-    .create-event-shell .rz-dropdown:focus-within,
-    .create-event-shell .rz-datepicker:focus-within,
-    .create-event-shell .rz-numeric:focus-within {
-        border-color: #7aa7ff !important;
-        background: #fff !important;
-        box-shadow: 0 0 0 0.22rem rgba(37, 99, 235, 0.12) !important;
-    }
+        .create-event-shell .rz-textbox:focus-within,
+        .create-event-shell .rz-dropdown:focus-within,
+        .create-event-shell .rz-datepicker:focus-within,
+        .create-event-shell .rz-numeric:focus-within {
+            border-color: #7aa7ff !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 0.22rem rgba(37, 99, 235, 0.12) !important;
+        }
 
     .create-event-shell input.rz-inputtext,
     .create-event-shell input.rz-numeric-input {
@@ -531,11 +536,11 @@
         box-sizing: border-box !important;
     }
 
-    .create-event-shell input.rz-inputtext::placeholder,
-    .create-event-shell input.rz-numeric-input::placeholder {
-        color: #6b7280 !important;
-        opacity: 1 !important;
-    }
+        .create-event-shell input.rz-inputtext::placeholder,
+        .create-event-shell input.rz-numeric-input::placeholder {
+            color: #6b7280 !important;
+            opacity: 1 !important;
+        }
 
     .create-event-shell textarea.rz-inputtext {
         border: none !important;
@@ -550,10 +555,10 @@
         resize: vertical;
     }
 
-    .create-event-shell textarea.rz-inputtext::placeholder {
-        color: #6b7280 !important;
-        opacity: 1 !important;
-    }
+        .create-event-shell textarea.rz-inputtext::placeholder {
+            color: #6b7280 !important;
+            opacity: 1 !important;
+        }
 
     .create-event-shell .rz-dropdown-label {
         border: none !important;
@@ -638,6 +643,7 @@
     private readonly CultureInfo englishCulture = new("en-US");
 
     private Event eventModel = new();
+    private List<EventCategory> categories = new();
     private bool isSubmitting = false;
 
     private string message = string.Empty;
@@ -653,22 +659,11 @@
     private DateTime eventDateOnly = DateTime.Today.AddDays(1);
     private string selectedTime = "18:00";
 
-    private readonly List<string> categories = new()
-    {
-        "Conference",
-        "Workshop",
-        "Concert",
-        "Sports",
-        "Networking",
-        "Festival",
-        "Seminar",
-        "Other"
-    };
-
     private readonly List<TimeOption> timeOptions = GenerateTimeOptions();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        categories = await Db.EventCategories.OrderBy(c => c.Name).ToListAsync();
         eventDateOnly = DateTime.Today.AddDays(1);
         selectedTime = "18:00";
         UpdateMapUrl();

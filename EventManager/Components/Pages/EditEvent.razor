@@ -6,11 +6,15 @@
 @using System.Security.Claims
 @using Radzen
 @using Radzen.Blazor
+@using EventManager.Data
 @using EventManager.Models
 @using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
 
 @inject IEventService EventService
+@inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -73,7 +77,7 @@
                 }
                 else
                 {
-                    @if (eventModel.Status == "Flagged" && !string.IsNullOrWhiteSpace(eventModel.AdminNote))
+                    @if (eventModel.EventStatus?.Name == "Flagged" && !string.IsNullOrWhiteSpace(eventModel.AdminNote))
                     {
                         <RadzenAlert AlertStyle="AlertStyle.Warning"
                                      Variant="Variant.Flat"
@@ -146,12 +150,14 @@
                                         <label class="form-label">Category</label>
                                         <RadzenDropDown Name="Category"
                                                         Data="@categories"
-                                                        @bind-Value="eventModel.Category"
+                                                        TextProperty="Name"
+                                                        ValueProperty="Id"
+                                                        @bind-Value="eventModel.EventCategoryId"
                                                         Placeholder="Select a category"
                                                         AllowClear="true"
                                                         Style="width: 100%;"
                                                         class="rz-field" />
-                                        <ValidationMessage For="@(() => eventModel.Category)" class="validation-text" />
+                                        <ValidationMessage For="@(() => eventModel.EventCategoryId)" class="validation-text" />
                                     </RadzenStack>
                                 </RadzenStack>
                             </RadzenCard>
@@ -716,6 +722,7 @@
     private readonly CultureInfo englishCulture = new("en-US");
 
     private Event? eventModel;
+    private List<EventCategory> categories = new();
     private bool isLoading = true;
     private bool isSubmitting = false;
 
@@ -732,22 +739,12 @@
 
     private DateTime minimumEventDate => DateTime.Now;
 
-    private readonly List<string> categories = new()
-    {
-        "Conference",
-        "Workshop",
-        "Concert",
-        "Sports",
-        "Networking",
-        "Festival",
-        "Seminar",
-        "Other"
-    };
-
     private readonly List<TimeOption> timeOptions = GenerateTimeOptions();
 
     protected override async Task OnInitializedAsync()
     {
+        categories = await Db.EventCategories.OrderBy(c => c.Name).ToListAsync();
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -763,16 +760,27 @@
 
         if (eventModel != null)
         {
-            var localDateTime = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
-            eventDateOnly = localDateTime.Date;
-            selectedTime = localDateTime.ToString("HH:mm");
-
-            if (!timeOptions.Any(t => t.Value == selectedTime))
+            if (eventModel.EventStatus == null)
             {
-                selectedTime = "18:00";
+                eventModel = await Db.Events
+                    .Include(e => e.EventCategory)
+                    .Include(e => e.EventStatus)
+                    .FirstOrDefaultAsync(e => e.Id == Id && e.CreatorId == userId);
             }
 
-            UpdateMapUrl();
+            if (eventModel != null)
+            {
+                var localDateTime = DateTime.SpecifyKind(eventModel.Date, DateTimeKind.Utc).ToLocalTime();
+                eventDateOnly = localDateTime.Date;
+                selectedTime = localDateTime.ToString("HH:mm");
+
+                if (!timeOptions.Any(t => t.Value == selectedTime))
+                {
+                    selectedTime = "18:00";
+                }
+
+                UpdateMapUrl();
+            }
         }
 
         isLoading = false;

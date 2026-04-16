@@ -2,11 +2,13 @@
 @rendermode InteractiveServer
 
 @using EventManager.Models
+@using EventManager.Services.Interfaces
 @using Microsoft.AspNetCore.Identity
 @using Radzen
 @using Radzen.Blazor
 
 @inject UserManager<ApplicationUser> UserManager
+@inject IEmailService EmailService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Register</PageTitle>
@@ -194,8 +196,8 @@
                                                                  Popup="false"
                                                                  Style="position: relative;" />
                                         <RadzenRegexValidator Component="Password"
-                                                              Pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z\d]).{6,}$"
-                                                              Text="Password must be at least 6 characters and include uppercase, lowercase, number, and special character."
+                                                              Pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$"
+                                                              Text="Password must be at least 8 characters and include uppercase, lowercase, and number."
                                                               Popup="false"
                                                               Style="position: relative;" />
                                     </RadzenStack>
@@ -524,7 +526,6 @@
         font-size: 0.85rem;
         margin-top: 0.2rem;
     }
-  
 </style>
 
 @code {
@@ -588,20 +589,38 @@
             return;
         }
 
+        var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        var encodedToken = Uri.EscapeDataString(token);
+
+        var confirmationLink =
+            $"{NavigationManager.BaseUri}confirm-email?userId={user.Id}&token={encodedToken}";
+
+        var body = $@"
+            <h2>Confirm your email</h2>
+            <p>Welcome to EventManager.</p>
+            <p>Please confirm your email by clicking the button below:</p>
+            <p>
+                <a href='{confirmationLink}' style='padding:10px 18px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;'>
+                    Confirm Email
+                </a>
+            </p>";
+
+        await EmailService.SendEmailAsync(user.Email!, "Confirm your EventManager account", body);
+
         if (registerModel.AccountType == "Attendee")
         {
             await UserManager.AddToRoleAsync(user, "Attendee");
-            SuccessMessage = "Registration successful. Redirecting to login...";
-            NavigationManager.NavigateTo("/login", forceLoad: true);
+            SuccessMessage = "Registration successful. Please check your email and confirm your account before logging in.";
         }
         else
         {
-            SuccessMessage = "Your Event Manager request was submitted and is waiting for admin approval.";
-            registerModel = new RegisterInputModel
-            {
-                AccountType = "Attendee"
-            };
+            SuccessMessage = "Your Event Manager request was submitted. Please confirm your email first, then wait for admin approval.";
         }
+
+        registerModel = new RegisterInputModel
+        {
+            AccountType = "Attendee"
+        };
     }
 
     private void GoToLogin()

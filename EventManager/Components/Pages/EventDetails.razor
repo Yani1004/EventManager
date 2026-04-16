@@ -4,6 +4,7 @@
 @using System.Security.Claims
 @using EventManager.Models
 @using EventManager.Services.Interfaces
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Radzen
 @using Radzen.Blazor
@@ -76,13 +77,13 @@
                                     <RadzenStack Orientation="Orientation.Horizontal"
                                                  Wrap="FlexWrap.Wrap"
                                                  Gap="0.6rem">
-                                        <RadzenBadge Text="@eventItem.Category"
+                                        <RadzenBadge Text="@eventItem.EventCategory.Name"
                                                      class="category-badge" />
 
                                         @if (canManageEvent || isAdmin)
                                         {
-                                            <RadzenBadge Text="@GetStatusLabel(eventItem.Status)"
-                                                         class="@GetStatusBadgeClass(eventItem.Status)" />
+                                            <RadzenBadge Text="@eventItem.EventStatus.Name"
+                                                         class="@GetStatusBadgeClass(eventItem.EventStatus.Name)" />
                                         }
                                     </RadzenStack>
                                 </RadzenStack>
@@ -578,7 +579,7 @@
             user.IsInRole("EventManager") &&
             currentUserId == eventItem.CreatorId;
 
-        if (!isAdmin && !isOwnerManager && eventItem.Status != "Active")
+        if (!isAdmin && !isOwnerManager && eventItem.EventStatus.Name != "Active")
         {
             eventItem = null;
             isLoading = false;
@@ -589,7 +590,7 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            if (user.IsInRole("Attendee") && eventItem.Status == "Active")
+            if (user.IsInRole("Attendee") && eventItem.EventStatus.Name == "Active")
             {
                 canRegister = true;
 
@@ -609,7 +610,7 @@
 
             showManagerAdminNote =
                 isOwnerManager &&
-                eventItem.Status == "Flagged" &&
+                eventItem.EventStatus.Name == "Flagged" &&
                 !string.IsNullOrWhiteSpace(eventItem.AdminNote);
         }
 
@@ -741,11 +742,5 @@
         "PendingReview" => "status-pending",
         "Hidden" => "status-hidden",
         _ => "status-default"
-    };
-
-    private string GetStatusLabel(string status) => status switch
-    {
-        "PendingReview" => "Pending Review",
-        _ => status
     };
 }

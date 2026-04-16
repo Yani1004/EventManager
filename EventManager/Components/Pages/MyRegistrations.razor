@@ -37,6 +37,7 @@
                 <RadzenButton Text="Browse Events"
                               Icon="explore"
                               Size="ButtonSize.Large"
+                              class ="rdz-btn"
                               Click='@(() => NavigationManager.NavigateTo("/events"))' />
             </RadzenStack>
         </RadzenCard>
@@ -79,6 +80,7 @@
                     <RadzenButton Text="Explore Events"
                                   Icon="travel_explore"
                                   Size="ButtonSize.Medium"
+                                  class ="rdz-btn"
                                   Click='@(() => NavigationManager.NavigateTo("/events"))' />
                 </RadzenStack>
             </RadzenCard>
@@ -95,7 +97,7 @@
                                     <img src="@(string.IsNullOrWhiteSpace(reg.Event?.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.Event!.ImageUrl)"
                                          alt="@reg.Event?.Title"
                                          class="registration-image" />
-                                    <RadzenBadge Text="@reg.Event?.Category"
+                                    <RadzenBadge Text="@reg.Event?.EventCategory?.Name"
                                                  class="category-badge" />
                                 </div>
 
@@ -191,7 +193,9 @@
         max-width: 88rem;
         margin: 0 auto;
     }
-
+    .rdz-btn{
+        border-radius:14px;
+    }
     .page-header-card,
     .state-card,
     .empty-card,
@@ -401,6 +405,9 @@
         {
             registrations = await Db.Registrations
                 .Include(r => r.Event)
+                    .ThenInclude(e => e.EventCategory)
+                .Include(r => r.Event)
+                    .ThenInclude(e => e.EventStatus)
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.RegisteredAt)
                 .ToListAsync();
@@ -446,4 +453,4 @@
 
         await LoadRegistrations();
     }
-}   
+}

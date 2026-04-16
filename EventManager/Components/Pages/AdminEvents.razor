@@ -2,12 +2,15 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
+@using EventManager.Data
 @using EventManager.Models
 @using EventManager.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
 @inject IAdminService AdminService
+@inject ApplicationDbContext Db
 @inject NavigationManager NavigationManager
 
 <PageTitle>Manage Events</PageTitle>
@@ -112,7 +115,7 @@
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
                         <RadzenStack Gap="0.3rem">
                             <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Active</RadzenText>
-                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Active")</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.StatusId == activeStatusId)</RadzenText>
                         </RadzenStack>
                         <div class="metric-icon-wrap">
                             <RadzenIcon Icon="check_circle" class="metric-icon" />
@@ -126,7 +129,7 @@
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
                         <RadzenStack Gap="0.3rem">
                             <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Flagged</RadzenText>
-                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Flagged")</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.StatusId == flaggedStatusId)</RadzenText>
                         </RadzenStack>
                         <div class="metric-icon-wrap">
                             <RadzenIcon Icon="flag" class="metric-icon" />
@@ -140,7 +143,7 @@
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
                         <RadzenStack Gap="0.3rem">
                             <RadzenText TextStyle="TextStyle.Body2" class="metric-label">Hidden</RadzenText>
-                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.Status == "Hidden")</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4" class="metric-value">@FilteredEvents.Count(e => e.StatusId == hiddenStatusId)</RadzenText>
                         </RadzenStack>
                         <div class="metric-icon-wrap">
                             <RadzenIcon Icon="visibility_off" class="metric-icon" />
@@ -165,10 +168,10 @@
                 <RadzenColumn Size="12" SizeLG="3">
                     <RadzenStack Gap="0.35rem">
                         <RadzenText TextStyle="TextStyle.Body2" class="input-label">Status</RadzenText>
-                        <RadzenDropDown @bind-Value="selectedStatus"
+                        <RadzenDropDown @bind-Value="selectedStatusId"
                                         Data="@statusOptions"
-                                        TextProperty="Text"
-                                        ValueProperty="Value"
+                                        TextProperty="Name"
+                                        ValueProperty="Id"
                                         Placeholder="All statuses"
                                         Style="width: 100%;"
                                         class="filter-input" />
@@ -240,7 +243,7 @@
 
                     <RadzenDataGridColumn TItem="AdminEventListItem" Title="Category">
                         <Template Context="ev">
-                            <RadzenBadge Text="@ev.Category"
+                            <RadzenBadge Text="@ev.CategoryName"
                                          Variant="Variant.Flat"
                                          Shade="Shade.Lighter"
                                          class="category-badge" />
@@ -255,8 +258,8 @@
 
                     <RadzenDataGridColumn TItem="AdminEventListItem" Title="Status">
                         <Template Context="ev">
-                            <span class="@GetStatusPillClass(ev.Status)">
-                                @GetStatusLabel(ev.Status)
+                            <span class="@GetStatusPillClass(ev.StatusId)">
+                                @ev.StatusName
                             </span>
                         </Template>
                     </RadzenDataGridColumn>
@@ -291,7 +294,7 @@
                                               class="action-button"
                                               title="View" />
 
-                                @if (ev.Status == "Active" || ev.Status == "Hidden" || ev.Status == "PendingReview")
+                                @if (ev.StatusId == activeStatusId || ev.StatusId == hiddenStatusId || ev.StatusId == pendingReviewStatusId)
                                 {
                                     <RadzenButton Icon="flag"
                                                   ButtonStyle="ButtonStyle.Warning"
@@ -303,7 +306,7 @@
                                                   title="Flag" />
                                 }
 
-                                @if (ev.Status == "Flagged")
+                                @if (ev.StatusId == flaggedStatusId)
                                 {
                                     <RadzenButton Icon="save"
                                                   ButtonStyle="ButtonStyle.Warning"
@@ -315,26 +318,26 @@
                                                   title="Update note" />
                                 }
 
-                                @if (ev.Status != "Hidden")
+                                @if (ev.StatusId != hiddenStatusId)
                                 {
                                     <RadzenButton Icon="visibility_off"
                                                   ButtonStyle="ButtonStyle.Secondary"
                                                   Variant="Variant.Filled"
                                                   Size="ButtonSize.Small"
                                                   Disabled="@isProcessing"
-                                                  Click='@(() => UpdateStatus(ev.Id, "Hidden"))'
+                                                  Click='@(() => UpdateStatus(ev.Id, hiddenStatusId))'
                                                   class="action-button"
                                                   title="Hide" />
                                 }
 
-                                @if (ev.Status != "Active")
+                                @if (ev.StatusId != activeStatusId)
                                 {
                                     <RadzenButton Icon="restart_alt"
                                                   ButtonStyle="ButtonStyle.Success"
                                                   Variant="Variant.Filled"
                                                   Size="ButtonSize.Small"
                                                   Disabled="@isProcessing"
-                                                  Click='@(() => UpdateStatus(ev.Id, "Active"))'
+                                                  Click='@(() => UpdateStatus(ev.Id, activeStatusId))'
                                                   class="action-button"
                                                   title="Restore" />
                                 }
@@ -585,6 +588,7 @@
 
 @code {
     private List<AdminEventListItem> events = new();
+    private List<EventStatus> statusOptions = new();
     private Dictionary<int, string> adminNotes = new();
 
     private bool isLoading = true;
@@ -594,17 +598,13 @@
     private string messageCss = "alert-success";
 
     private string searchTerm = string.Empty;
-    private string selectedStatus = string.Empty;
+    private int? selectedStatusId;
     private string selectedSort = "date_asc";
 
-    private readonly List<OptionItem> statusOptions = new()
-    {
-        new() { Text = "All statuses", Value = "" },
-        new() { Text = "Active", Value = "Active" },
-        new() { Text = "Flagged", Value = "Flagged" },
-        new() { Text = "Hidden", Value = "Hidden" },
-        new() { Text = "Pending Review", Value = "PendingReview" }
-    };
+    private int activeStatusId;
+    private int flaggedStatusId;
+    private int hiddenStatusId;
+    private int pendingReviewStatusId;
 
     private readonly List<OptionItem> sortOptions = new()
     {
@@ -616,7 +616,20 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadStatuses();
         await LoadEvents();
+    }
+
+    private async Task LoadStatuses()
+    {
+        statusOptions = await Db.EventStatuses
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        activeStatusId = statusOptions.FirstOrDefault(s => s.Name == "Active")?.Id ?? 0;
+        flaggedStatusId = statusOptions.FirstOrDefault(s => s.Name == "Flagged")?.Id ?? 0;
+        hiddenStatusId = statusOptions.FirstOrDefault(s => s.Name == "Hidden")?.Id ?? 0;
+        pendingReviewStatusId = statusOptions.FirstOrDefault(s => s.Name == "PendingReview")?.Id ?? 0;
     }
 
     private async Task LoadEvents()
@@ -645,12 +658,12 @@
                 query = query.Where(e =>
                     (e.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (e.Location?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (e.Category?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+                    (e.CategoryName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
             }
 
-            if (!string.IsNullOrWhiteSpace(selectedStatus))
+            if (selectedStatusId.HasValue)
             {
-                query = query.Where(e => e.Status == selectedStatus);
+                query = query.Where(e => e.StatusId == selectedStatusId.Value);
             }
 
             query = selectedSort switch
@@ -723,16 +736,16 @@
         isProcessing = false;
     }
 
-    private async Task UpdateStatus(int eventId, string newStatus)
+    private async Task UpdateStatus(int eventId, int newStatusId)
     {
         isProcessing = true;
         ClearMessage();
 
-        var result = await AdminService.UpdateEventStatusAsync(eventId, newStatus);
+        var result = await AdminService.UpdateEventStatusAsync(eventId, newStatusId);
 
         if (result.Success)
         {
-            if (newStatus != "Flagged")
+            if (newStatusId != flaggedStatusId)
             {
                 adminNotes[eventId] = string.Empty;
             }
@@ -748,25 +761,19 @@
         isProcessing = false;
     }
 
-    private string GetStatusLabel(string status) => status switch
+    private string GetStatusPillClass(int statusId)
     {
-        "PendingReview" => "Pending Review",
-        _ => status
-    };
-
-    private string GetStatusPillClass(string status) => status switch
-    {
-        "Active" => "status-pill status-active",
-        "Flagged" => "status-pill status-flagged",
-        "PendingReview" => "status-pill status-pending",
-        "Hidden" => "status-pill status-hidden",
-        _ => "status-pill status-default"
-    };
+        if (statusId == activeStatusId) return "status-pill status-active";
+        if (statusId == flaggedStatusId) return "status-pill status-flagged";
+        if (statusId == pendingReviewStatusId) return "status-pill status-pending";
+        if (statusId == hiddenStatusId) return "status-pill status-hidden";
+        return "status-pill status-default";
+    }
 
     private void ClearFilters()
     {
         searchTerm = string.Empty;
-        selectedStatus = string.Empty;
+        selectedStatusId = null;
         selectedSort = "date_asc";
     }
 

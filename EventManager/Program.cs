@@ -6,7 +6,8 @@ using EventManager.Services;
 using EventManager.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
@@ -19,7 +20,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-	options.SignIn.RequireConfirmedAccount = false;
+	options.SignIn.RequireConfirmedAccount = true;
+	options.SignIn.RequireConfirmedEmail = true;
 
 	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
 	options.Lockout.MaxFailedAccessAttempts = 5;
@@ -46,7 +48,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.Configure<EmailSettings>(
+	builder.Configuration.GetSection("EmailSettings"));
 
+builder.Services.AddScoped<IEmailService, EmailService>();
 var app = builder.Build();
 
 
@@ -99,7 +104,10 @@ app.MapGet("/account/do-login", async (
 	{
 		return Results.Redirect("/login?error=Your Event Manager account is still pending admin approval");
 	}
-
+	if (!await userManager.IsEmailConfirmedAsync(user))
+	{
+		return Results.Redirect("/login?error=Please confirm your email before logging in");
+	}
 	var result = await signInManager.PasswordSignInAsync(
 		user.UserName!,
 		password,

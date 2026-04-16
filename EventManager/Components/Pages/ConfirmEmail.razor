@@ -1,0 +1,87 @@
+﻿@page "/confirm-email"
+@rendermode InteractiveServer
+
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Radzen.Blazor
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Confirm Email</PageTitle>
+
+<div style="max-width:700px;margin:3rem auto;padding:1rem;">
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H4">Email Confirmation</RadzenText>
+
+            @if (isLoading)
+            {
+                <RadzenText>Confirming your email...</RadzenText>
+            }
+            else
+            {
+                <RadzenAlert AlertStyle="@alertStyle" Variant="Variant.Flat" Shade="Shade.Light" class = "round">
+                    @message
+                </RadzenAlert>
+
+                <RadzenButton Text="Go to Login"
+                              Icon="login"
+                              class="round"
+                              Click='@(() => NavigationManager.NavigateTo("/login"))' />
+            }
+        </RadzenStack>
+    </RadzenCard>
+</div>
+<style>
+    .round{
+        border-radius:14px;
+    }
+</style>
+@code {
+    [SupplyParameterFromQuery] public string? userId { get; set; }
+    [SupplyParameterFromQuery] public string? token { get; set; }
+
+    private bool isLoading = true;
+    private string message = string.Empty;
+    private AlertStyle alertStyle = AlertStyle.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+        {
+            message = "Invalid confirmation link.";
+            alertStyle = AlertStyle.Danger;
+            isLoading = false;
+            return;
+        }
+
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            message = "User not found.";
+            alertStyle = AlertStyle.Danger;
+            isLoading = false;
+            return;
+        }
+
+        var result = await UserManager.ConfirmEmailAsync(user, token);
+        //var result = await UserManager.ConfirmEmailAsync(user, decodedToken);
+
+        if (result.Succeeded)
+        {
+            message = "Your email has been confirmed successfully.";
+            alertStyle = AlertStyle.Success;
+        }
+        else
+        {
+            message = "Email confirmation failed.";
+            alertStyle = AlertStyle.Danger;
+        }
+       
+
+        isLoading = false;
+    }
+}

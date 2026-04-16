@@ -30,14 +30,16 @@ namespace EventManager.Services
 
 		public async Task<ServiceResult> RegisterForEventAsync(int eventId, string userId)
 		{
-			var eventItem = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+			var eventItem = await _db.Events
+				.Include(e => e.EventStatus)
+				.FirstOrDefaultAsync(e => e.Id == eventId);
 
 			if (eventItem == null)
 			{
 				return ServiceResult.Fail("Event not found.");
 			}
 
-			if (eventItem.Status != "Active")
+			if (eventItem.EventStatus.Name != "Active")
 			{
 				return ServiceResult.Fail("This event is currently not available for registration.");
 			}
@@ -57,11 +59,22 @@ namespace EventManager.Services
 				return ServiceResult.Fail("This event is already full.");
 			}
 
+			var registeredStatusId = await _db.RegistrationStatuses
+				.Where(s => s.Name == "Registered")
+				.Select(s => s.Id)
+				.FirstOrDefaultAsync();
+
+			if (registeredStatusId == 0)
+			{
+				return ServiceResult.Fail("Registration status not found.");
+			}
+
 			var registration = new Registration
 			{
 				EventId = eventId,
 				UserId = userId,
-				RegisteredAt = DateTime.UtcNow
+				RegisteredAt = DateTime.UtcNow,
+				RegistrationStatusId = registeredStatusId
 			};
 
 			_db.Registrations.Add(registration);

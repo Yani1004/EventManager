@@ -12,6 +12,6 @@ namespace EventManager.Services.Interfaces
         Task<List<AdminEventListItem>> GetAllEventsForAdminAsync();
         Task<ServiceResult> FlagEventAsync(int eventId, string adminNote);
         Task<ServiceResult> UpdateFlaggedNoteAsync(int eventId, string adminNote);
-        Task<ServiceResult> UpdateEventStatusAsync(int eventId, string newStatus);
-    }
+		Task<ServiceResult> UpdateEventStatusAsync(int eventId, int newStatusId);
+	}
 }
