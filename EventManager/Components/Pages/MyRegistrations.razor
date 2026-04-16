@@ -37,6 +37,7 @@
                 <RadzenButton Text="Browse Events"
                               Icon="explore"
                               Size="ButtonSize.Large"
+                              class ="rdz-btn"
                               Click='@(() => NavigationManager.NavigateTo("/events"))' />
             </RadzenStack>
         </RadzenCard>
@@ -79,6 +80,7 @@
                     <RadzenButton Text="Explore Events"
                                   Icon="travel_explore"
                                   Size="ButtonSize.Medium"
+                                  class ="rdz-btn"
                                   Click='@(() => NavigationManager.NavigateTo("/events"))' />
                 </RadzenStack>
             </RadzenCard>
@@ -95,7 +97,7 @@
                                     <img src="@(string.IsNullOrWhiteSpace(reg.Event?.ImageUrl) ? "https://via.placeholder.com/400x220?text=No+Image" : reg.Event!.ImageUrl)"
                                          alt="@reg.Event?.Title"
                                          class="registration-image" />
-                                    <RadzenBadge Text="@reg.Event?.Category"
+                                    <RadzenBadge Text="@reg.Event?.EventCategory?.Name"
                                                  class="category-badge" />
                                 </div>
 
@@ -106,7 +108,7 @@
                                         </RadzenText>
 
                                         <RadzenText TextStyle="TextStyle.Body2" class="description-text">
-                                            Registered event details and quick actions.
+                                            Registered event details, payment confirmation, and quick actions.
                                         </RadzenText>
                                     </RadzenStack>
 
@@ -152,13 +154,44 @@
                                                 </RadzenText>
                                             </RadzenStack>
                                         </RadzenStack>
+
+                                        <div class="payment-status-card">
+                                            <div class="payment-status-header">
+                                                <div class="payment-badge">
+                                                    <RadzenIcon Icon="credit_score" class="payment-icon" />
+                                                </div>
+                                                <div>
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="detail-label">Payment</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="payment-status-text">
+                                                        @(reg.Event?.Price > 0 ? "Paid and confirmed" : "Free ticket issued")
+                                                    </RadzenText>
+                                                </div>
+                                            </div>
+
+                                            <div class="payment-meta">
+                                                <div class="payment-meta-row">
+                                                    <span>Amount</span>
+                                                    <strong>@(reg.Event?.Price > 0 ? $"{reg.Event?.Price:F2} lv." : "Free")</strong>
+                                                </div>
+                                                <div class="payment-meta-row">
+                                                    <span>Ticket</span>
+                                                    <strong>@(reg.Ticket?.TicketNumber ?? "Pending issue")</strong>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </RadzenStack>
 
                                     <RadzenStack Orientation="Orientation.Horizontal"
                                                  Gap="0.75rem"
                                                  Wrap="FlexWrap.Wrap"
                                                  class="actions-row">
-                                        <RadzenButton Text="View Event"
+                                        <RadzenButton Text="View Ticket"
+                                                      Icon="confirmation_number"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      class="action-button"
+                                                      Click='@(() => NavigationManager.NavigateTo($"/my-registrations/{reg.Id}/ticket"))' />
+
+                                        <RadzenButton Text="Event Details"
                                                       Icon="visibility"
                                                       Variant="Variant.Outlined"
                                                       ButtonStyle="ButtonStyle.Primary"
@@ -191,7 +224,9 @@
         max-width: 88rem;
         margin: 0 auto;
     }
-
+    .rdz-btn{
+        border-radius:14px;
+    }
     .page-header-card,
     .state-card,
     .empty-card,
@@ -350,6 +385,59 @@
         margin-top: auto;
     }
 
+    .payment-status-card {
+        padding: 0.95rem 1rem;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, rgba(219, 234, 254, 0.7) 0%, rgba(239, 246, 255, 0.95) 100%);
+        border: 1px solid rgba(59, 130, 246, 0.14);
+    }
+
+    .payment-status-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .payment-badge {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(37, 99, 235, 0.12);
+        flex-shrink: 0;
+    }
+
+    .payment-icon {
+        color: #2563eb;
+        font-size: 1.2rem;
+    }
+
+    .payment-status-text {
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .payment-meta {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .payment-meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        color: #475569;
+    }
+
+    .payment-meta-row strong {
+        color: #0f172a;
+        text-align: right;
+        word-break: break-word;
+    }
+
     .action-button {
         flex: 1 1 10rem;
         justify-content: center;
@@ -373,6 +461,16 @@
         .registration-content {
             padding: 1rem;
             min-height: auto;
+        }
+
+        .payment-meta-row {
+            display: block;
+        }
+
+        .payment-meta-row strong {
+            display: block;
+            margin-top: 0.2rem;
+            text-align: left;
         }
     }
 </style>
@@ -401,6 +499,10 @@
         {
             registrations = await Db.Registrations
                 .Include(r => r.Event)
+                    .ThenInclude(e => e.EventCategory)
+                .Include(r => r.Event)
+                    .ThenInclude(e => e.EventStatus)
+                .Include(r => r.Ticket)
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.RegisteredAt)
                 .ToListAsync();
@@ -446,4 +548,4 @@
 
         await LoadRegistrations();
     }
-}   
+}

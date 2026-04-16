@@ -4,6 +4,7 @@
 @using System.Security.Claims
 @using EventManager.Models
 @using EventManager.Services.Interfaces
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Radzen
 @using Radzen.Blazor
@@ -76,13 +77,13 @@
                                     <RadzenStack Orientation="Orientation.Horizontal"
                                                  Wrap="FlexWrap.Wrap"
                                                  Gap="0.6rem">
-                                        <RadzenBadge Text="@eventItem.Category"
+                                        <RadzenBadge Text="@eventItem.EventCategory.Name"
                                                      class="category-badge" />
 
                                         @if (canManageEvent || isAdmin)
                                         {
-                                            <RadzenBadge Text="@GetStatusLabel(eventItem.Status)"
-                                                         class="@GetStatusBadgeClass(eventItem.Status)" />
+                                            <RadzenBadge Text="@eventItem.EventStatus.Name"
+                                                         class="@GetStatusBadgeClass(eventItem.EventStatus.Name)" />
                                         }
                                     </RadzenStack>
                                 </RadzenStack>
@@ -206,13 +207,12 @@
                                         <RadzenStack Gap="0.75rem">
                                             @if (canRegister && !isAlreadyRegistered)
                                             {
-                                                <RadzenButton Text="@(isRegistering ? "Registering..." : "Register")"
-                                                              Icon="how_to_reg"
+                                                <RadzenButton Text="@(eventItem.Price > 0 ? "Register & Pay" : "Register")"
+                                                              Icon="credit_card"
                                                               Size="ButtonSize.Large"
                                                               ButtonStyle="ButtonStyle.Primary"
                                                               class="action-button"
-                                                              Disabled="@isRegistering"
-                                                              Click="@RegisterForEvent" />
+                                                              Click="@GoToPayment" />
                                             }
 
                                             @if (canRegister && isAlreadyRegistered)
@@ -535,7 +535,6 @@
 
     private Event? eventItem;
     private bool isLoading = true;
-    private bool isRegistering = false;
     private bool canRegister = false;
     private bool canManageEvent = false;
     private bool isAdmin = false;
@@ -578,7 +577,7 @@
             user.IsInRole("EventManager") &&
             currentUserId == eventItem.CreatorId;
 
-        if (!isAdmin && !isOwnerManager && eventItem.Status != "Active")
+        if (!isAdmin && !isOwnerManager && eventItem.EventStatus.Name != "Active")
         {
             eventItem = null;
             isLoading = false;
@@ -589,7 +588,7 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            if (user.IsInRole("Attendee") && eventItem.Status == "Active")
+            if (user.IsInRole("Attendee") && eventItem.EventStatus.Name == "Active")
             {
                 canRegister = true;
 
@@ -609,79 +608,21 @@
 
             showManagerAdminNote =
                 isOwnerManager &&
-                eventItem.Status == "Flagged" &&
+                eventItem.EventStatus.Name == "Flagged" &&
                 !string.IsNullOrWhiteSpace(eventItem.AdminNote);
         }
 
         isLoading = false;
     }
 
-    private async Task RegisterForEvent()
+    private void GoToPayment()
     {
         if (eventItem == null)
+        {
             return;
-
-        isRegistering = true;
-        message = string.Empty;
-
-        try
-        {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (user.Identity?.IsAuthenticated != true)
-            {
-                message = "You must be logged in to register.";
-                messageStyle = AlertStyle.Danger;
-                return;
-            }
-
-            if (!user.IsInRole("Attendee"))
-            {
-                message = "Only attendees can register for events.";
-                messageStyle = AlertStyle.Warning;
-                return;
-            }
-
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                message = "Could not identify the current user.";
-                messageStyle = AlertStyle.Danger;
-                return;
-            }
-
-            var result = await RegistrationService.RegisterForEventAsync(eventItem.Id, userId);
-
-            if (!result.Success)
-            {
-                message = result.Message;
-                messageStyle = AlertStyle.Warning;
-                return;
-            }
-
-            registeredCount = await RegistrationService.GetRegisteredCountAsync(eventItem.Id);
-
-            var registration = await RegistrationService.GetUserRegistrationAsync(eventItem.Id, userId);
-            if (registration != null)
-            {
-                isAlreadyRegistered = true;
-                currentRegistrationId = registration.Id;
-            }
-
-            message = result.Message;
-            messageStyle = AlertStyle.Success;
         }
-        catch
-        {
-            message = "Something went wrong while registering.";
-            messageStyle = AlertStyle.Danger;
-        }
-        finally
-        {
-            isRegistering = false;
-        }
+
+        NavigationManager.NavigateTo($"/events/{eventItem.Id}/payment");
     }
 
     private async Task CancelRegistrationFromDetails()
@@ -741,11 +682,5 @@
         "PendingReview" => "status-pending",
         "Hidden" => "status-hidden",
         _ => "status-default"
-    };
-
-    private string GetStatusLabel(string status) => status switch
-    {
-        "PendingReview" => "Pending Review",
-        _ => status
     };
 }

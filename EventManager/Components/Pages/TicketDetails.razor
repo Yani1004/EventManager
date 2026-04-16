@@ -1,0 +1,485 @@
+@page "/my-registrations/{RegistrationId:int}/ticket"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Attendee")]
+
+@using System.Security.Claims
+@using EventManager.Data
+@using EventManager.Models
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>My Ticket</PageTitle>
+
+<div class="ticket-page">
+    <RadzenStack Gap="1.5rem" class="page-stack">
+        @if (isLoading)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" />
+                    <RadzenText TextStyle="TextStyle.Body1">Loading ticket...</RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else if (registration == null || registration.Event == null)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <div class="state-icon-wrap">
+                        <RadzenIcon Icon="confirmation_number" class="state-icon" />
+                    </div>
+                    <RadzenText TextStyle="TextStyle.H5" class="state-title">Ticket not found</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="state-text">
+                        The requested ticket could not be found for your account.
+                    </RadzenText>
+                    <RadzenButton Text="Back to My Registrations"
+                                  Icon="arrow_back"
+                                  Variant="Variant.Outlined"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Click='@(() => NavigationManager.NavigateTo("/my-registrations"))' />
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <div class="ticket-hero">
+                <div>
+                    <div class="hero-kicker">Digital event pass</div>
+                    <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="hero-title">
+                        @registration.Event.Title
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="hero-text">
+                        Your ticket is confirmed and ready to present at the event.
+                    </RadzenText>
+                </div>
+
+                <div class="hero-actions">
+                    <RadzenButton Text="Back to My Registrations"
+                                  Icon="arrow_back"
+                                  Variant="Variant.Outlined"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  class="hero-button"
+                                  Click='@(() => NavigationManager.NavigateTo("/my-registrations"))' />
+                    <RadzenButton Text="Event Details"
+                                  Icon="visibility"
+                                  class="hero-button"
+                                  Click='@(() => NavigationManager.NavigateTo($"/events/{registration.EventId}"))' />
+                </div>
+            </div>
+
+            <RadzenRow Gap="1.5rem" RowGap="1.5rem">
+                <RadzenColumn Size="12" SizeXL="7">
+                    <RadzenCard class="ticket-card">
+                        <div class="ticket-top">
+                            <div class="ticket-category">
+                                @registration.Event.EventCategory?.Name
+                            </div>
+                            <div class="ticket-status">
+                                @(registration.Event.Price > 0 ? "Paid" : "Free")
+                            </div>
+                        </div>
+
+                        <div class="ticket-main">
+                            <div class="ticket-copy">
+                                <RadzenText TextStyle="TextStyle.H4" class="ticket-title">
+                                    @registration.Event.Title
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="ticket-location">
+                                    @registration.Event.Location
+                                </RadzenText>
+                            </div>
+
+                            <div class="ticket-grid">
+                                <div class="ticket-grid-item">
+                                    <span>Date</span>
+                                    <strong>@registration.Event.Date.ToLocalTime().ToString("dd.MM.yyyy")</strong>
+                                </div>
+                                <div class="ticket-grid-item">
+                                    <span>Time</span>
+                                    <strong>@registration.Event.Date.ToLocalTime().ToString("HH:mm")</strong>
+                                </div>
+                                <div class="ticket-grid-item">
+                                    <span>Ticket Number</span>
+                                    <strong>@registration.Ticket?.TicketNumber</strong>
+                                </div>
+                                <div class="ticket-grid-item">
+                                    <span>Verification</span>
+                                    <strong>@registration.Ticket?.VerificationCode</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ticket-divider"></div>
+
+                        <div class="ticket-footer">
+                            <div class="barcode-wrap" aria-label="Ticket barcode preview">
+                                @for (var i = 0; i < barcodePattern.Length; i++)
+                                {
+                                    <span class="barcode-line @(barcodePattern[i] == '1' ? "line-thick" : "line-thin")"></span>
+                                }
+                            </div>
+
+                            <div class="ticket-note">
+                                Present this ticket at the event entrance together with your verification code.
+                            </div>
+                        </div>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Size="12" SizeXL="5">
+                    <RadzenStack Gap="1rem">
+                        <RadzenCard class="info-card">
+                            <RadzenText TextStyle="TextStyle.H6" class="section-title">
+                                Payment Summary
+                            </RadzenText>
+
+                            <div class="info-list">
+                                <div class="info-row">
+                                    <span>Status</span>
+                                    <strong>@(registration.Event.Price > 0 ? "Payment completed" : "Free ticket issued")</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Amount</span>
+                                    <strong>@(registration.Event.Price > 0 ? $"{registration.Event.Price:F2} lv." : "Free")</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Registered On</span>
+                                    <strong>@registration.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
+                                </div>
+                            </div>
+                        </RadzenCard>
+
+                        <RadzenCard class="info-card">
+                            <RadzenText TextStyle="TextStyle.H6" class="section-title">
+                                Entry Information
+                            </RadzenText>
+
+                            <div class="entry-list">
+                                <div class="entry-item">
+                                    <RadzenIcon Icon="schedule" class="entry-icon" />
+                                    <span>Arrive a few minutes before the event starts.</span>
+                                </div>
+                                <div class="entry-item">
+                                    <RadzenIcon Icon="qr_code_2" class="entry-icon" />
+                                    <span>Keep your ticket number and verification code available for check-in.</span>
+                                </div>
+                                <div class="entry-item">
+                                    <RadzenIcon Icon="place" class="entry-icon" />
+                                    <span>@registration.Event.Location</span>
+                                </div>
+                            </div>
+                        </RadzenCard>
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        }
+    </RadzenStack>
+</div>
+
+<style>
+    .ticket-page {
+        padding: 1.5rem;
+    }
+
+    .page-stack {
+        max-width: 88rem;
+        margin: 0 auto;
+    }
+
+    .ticket-hero {
+        padding: 1.75rem;
+        border-radius: 1.75rem;
+        background:
+            radial-gradient(circle at top right, rgba(37, 99, 235, 0.18), transparent 30%),
+            linear-gradient(135deg, #f8fbff 0%, #eef4ff 46%, #f8fafc 100%);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .hero-kicker {
+        display: inline-flex;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999rem;
+        background: rgba(37, 99, 235, 0.10);
+        color: #1d4ed8;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-title,
+    .section-title,
+    .ticket-title,
+    .state-title {
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .hero-text,
+    .state-text {
+        color: #64748b;
+        max-width: 40rem;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-button {
+        justify-content: center;
+    }
+
+    .ticket-card,
+    .info-card,
+    .state-card {
+        border: none;
+        border-radius: 1.5rem;
+        box-shadow: 0 1.125rem 2.8125rem rgba(15, 23, 42, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    }
+
+    .ticket-card,
+    .info-card,
+    .state-card {
+        padding: 1.5rem;
+    }
+
+    .ticket-card {
+        overflow: hidden;
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent 22%),
+            linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #2563eb 100%);
+        color: #ffffff;
+    }
+
+    .ticket-top,
+    .ticket-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .ticket-category,
+    .ticket-status {
+        padding: 0.45rem 0.85rem;
+        border-radius: 999rem;
+        font-weight: 700;
+        background: rgba(255,255,255,0.16);
+        backdrop-filter: blur(0.2rem);
+    }
+
+    .ticket-main {
+        padding: 1.5rem 0;
+    }
+
+    .ticket-location {
+        color: rgba(255,255,255,0.82);
+    }
+
+    .ticket-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .ticket-grid-item {
+        padding: 1rem;
+        border-radius: 1rem;
+        background: rgba(255,255,255,0.10);
+        border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .ticket-grid-item span {
+        display: block;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .ticket-grid-item strong {
+        display: block;
+        font-size: 1rem;
+        word-break: break-word;
+    }
+
+    .ticket-divider {
+        height: 1px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.4), rgba(255,255,255,0.06));
+        margin: 0 -1.5rem;
+    }
+
+    .barcode-wrap {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.18rem;
+        min-height: 4rem;
+    }
+
+    .barcode-line {
+        display: block;
+        background: rgba(255,255,255,0.92);
+        border-radius: 999rem;
+        height: 4rem;
+    }
+
+    .line-thin {
+        width: 0.16rem;
+    }
+
+    .line-thick {
+        width: 0.34rem;
+    }
+
+    .ticket-note {
+        max-width: 16rem;
+        color: rgba(255,255,255,0.82);
+        line-height: 1.5;
+    }
+
+    .info-list,
+    .entry-list {
+        margin-top: 1rem;
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        color: #475569;
+    }
+
+    .info-row strong {
+        color: #0f172a;
+        text-align: right;
+    }
+
+    .entry-item {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        color: #475569;
+        line-height: 1.55;
+    }
+
+    .entry-icon {
+        color: #2563eb;
+        margin-top: 0.1rem;
+    }
+
+    .state-stack {
+        padding: 1rem 0;
+    }
+
+    .state-icon-wrap {
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: 1.25rem;
+        background: rgba(37, 99, 235, 0.10);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .state-icon {
+        font-size: 2rem;
+        color: #2563eb;
+    }
+
+    @@media (max-width: 75rem) {
+        .ticket-page {
+            padding: 1rem;
+        }
+    }
+
+    @@media (max-width: 40rem) {
+        .ticket-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .ticket-top,
+        .ticket-footer,
+        .info-row {
+            display: block;
+        }
+
+        .ticket-status,
+        .ticket-note,
+        .info-row strong {
+            margin-top: 0.5rem;
+        }
+
+        .info-row strong {
+            display: block;
+            text-align: left;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int RegistrationId { get; set; }
+
+    private Registration? registration;
+    private bool isLoading = true;
+    private string barcodePattern = "1011010110111011010010110110101101";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketAsync();
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        isLoading = true;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            registration = null;
+            isLoading = false;
+            return;
+        }
+
+        registration = await Db.Registrations
+            .Include(r => r.Event)
+                .ThenInclude(e => e.EventCategory)
+            .Include(r => r.Ticket)
+            .FirstOrDefaultAsync(r => r.Id == RegistrationId && r.UserId == userId);
+
+        if (registration?.Ticket?.TicketNumber is { Length: > 0 } ticketNumber)
+        {
+            barcodePattern = BuildBarcodePattern(ticketNumber);
+        }
+
+        isLoading = false;
+    }
+
+    private static string BuildBarcodePattern(string source)
+    {
+        var bits = string.Concat(source.Select(ch => Convert.ToString(ch, 2).PadLeft(8, '0')));
+        return string.IsNullOrWhiteSpace(bits) ? "1011010110111011010010110110101101" : bits[..Math.Min(bits.Length, 56)];
+    }
+}

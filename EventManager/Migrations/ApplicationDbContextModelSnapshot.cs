@@ -99,6 +99,44 @@ namespace EventManager.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("EventManager.Models.EmailLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BodyPreview")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailLogs");
+                });
+
             modelBuilder.Entity("EventManager.Models.Event", b =>
                 {
                     b.Property<int>("Id")
@@ -108,15 +146,11 @@ namespace EventManager.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AdminNote")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -133,6 +167,12 @@ namespace EventManager.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int>("EventCategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EventStatusId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
@@ -144,10 +184,6 @@ namespace EventManager.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -155,7 +191,115 @@ namespace EventManager.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EventCategoryId");
+
+                    b.HasIndex("EventStatusId");
+
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("EventManager.Models.EventCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("EventCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Conference"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Workshop"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Concert"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Sports"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Networking"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Festival"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Seminar"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Other"
+                        });
+                });
+
+            modelBuilder.Entity("EventManager.Models.EventStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("EventStatuses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Draft"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Active"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Cancelled"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Archived"
+                        });
                 });
 
             modelBuilder.Entity("EventManager.Models.Registration", b =>
@@ -172,16 +316,100 @@ namespace EventManager.Migrations
                     b.Property<DateTime>("RegisteredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("RegistrationStatusId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RegistrationStatusId");
+
+                    b.HasIndex("UserId");
+
                     b.HasIndex("EventId", "UserId")
                         .IsUnique();
 
                     b.ToTable("Registrations");
+                });
+
+            modelBuilder.Entity("EventManager.Models.RegistrationStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("RegistrationStatuses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Registered"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Cancelled"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Attended"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "NoShow"
+                        });
+                });
+
+            modelBuilder.Entity("EventManager.Models.Ticket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RegistrationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TicketNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("VerificationCode")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RegistrationId")
+                        .IsUnique();
+
+                    b.HasIndex("TicketNumber")
+                        .IsUnique();
+
+                    b.ToTable("Tickets");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -316,6 +544,25 @@ namespace EventManager.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("EventManager.Models.Event", b =>
+                {
+                    b.HasOne("EventManager.Models.EventCategory", "EventCategory")
+                        .WithMany("Events")
+                        .HasForeignKey("EventCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EventManager.Models.EventStatus", "EventStatus")
+                        .WithMany("Events")
+                        .HasForeignKey("EventStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EventCategory");
+
+                    b.Navigation("EventStatus");
+                });
+
             modelBuilder.Entity("EventManager.Models.Registration", b =>
                 {
                     b.HasOne("EventManager.Models.Event", "Event")
@@ -324,7 +571,34 @@ namespace EventManager.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("EventManager.Models.RegistrationStatus", "RegistrationStatus")
+                        .WithMany("Registrations")
+                        .HasForeignKey("RegistrationStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EventManager.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Event");
+
+                    b.Navigation("RegistrationStatus");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EventManager.Models.Ticket", b =>
+                {
+                    b.HasOne("EventManager.Models.Registration", "Registration")
+                        .WithOne("Ticket")
+                        .HasForeignKey("EventManager.Models.Ticket", "RegistrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Registration");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -379,6 +653,26 @@ namespace EventManager.Migrations
                 });
 
             modelBuilder.Entity("EventManager.Models.Event", b =>
+                {
+                    b.Navigation("Registrations");
+                });
+
+            modelBuilder.Entity("EventManager.Models.EventCategory", b =>
+                {
+                    b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("EventManager.Models.EventStatus", b =>
+                {
+                    b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("EventManager.Models.Registration", b =>
+                {
+                    b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("EventManager.Models.RegistrationStatus", b =>
                 {
                     b.Navigation("Registrations");
                 });

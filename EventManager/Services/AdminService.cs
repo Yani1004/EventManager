@@ -180,6 +180,8 @@ namespace EventManager.Services
 		public async Task<List<AdminEventListItem>> GetAllEventsForAdminAsync()
 		{
 			var events = await _db.Events
+				.Include(e => e.EventCategory)
+				.Include(e => e.EventStatus)
 				.OrderBy(e => e.Date)
 				.ToListAsync();
 
@@ -215,8 +217,10 @@ namespace EventManager.Services
 				Description = ev.Description,
 				Date = ev.Date,
 				Location = ev.Location,
-				Category = ev.Category,
-				Status = ev.Status,
+				CategoryId = ev.EventCategoryId,
+				CategoryName = ev.EventCategory.Name,
+				StatusId = ev.EventStatusId,
+				StatusName = ev.EventStatus.Name,
 				AdminNote = ev.AdminNote,
 				CreatorId = ev.CreatorId,
 				CreatorName = !string.IsNullOrWhiteSpace(ev.CreatorId) && creatorNames.TryGetValue(ev.CreatorId, out var creatorName)
@@ -242,7 +246,9 @@ namespace EventManager.Services
 				return ServiceResult.Fail("Please write an admin note before flagging the event.");
 			}
 
-			ev.Status = "Flagged";
+			var flaggedStatusId = await GetRequiredStatusIdAsync("Flagged");
+
+			ev.EventStatusId = flaggedStatusId;
 			ev.AdminNote = adminNote.Trim();
 
 			await _db.SaveChangesAsync();
@@ -252,14 +258,16 @@ namespace EventManager.Services
 
 		public async Task<ServiceResult> UpdateFlaggedNoteAsync(int eventId, string adminNote)
 		{
-			var ev = await _db.Events.FindAsync(eventId);
+			var ev = await _db.Events
+				.Include(e => e.EventStatus)
+				.FirstOrDefaultAsync(e => e.Id == eventId);
 
 			if (ev == null)
 			{
 				return ServiceResult.Fail("Event not found.");
 			}
 
-			if (ev.Status != "Flagged")
+			if (ev.EventStatus.Name != "Flagged")
 			{
 				return ServiceResult.Fail("Only flagged events can update the saved admin note.");
 			}
@@ -276,7 +284,7 @@ namespace EventManager.Services
 			return ServiceResult.Ok($"Admin note updated for \"{ev.Title}\".");
 		}
 
-		public async Task<ServiceResult> UpdateEventStatusAsync(int eventId, string newStatus)
+		public async Task<ServiceResult> UpdateEventStatusAsync(int eventId, int newStatusId)
 		{
 			var ev = await _db.Events.FindAsync(eventId);
 
@@ -285,17 +293,37 @@ namespace EventManager.Services
 				return ServiceResult.Fail("Event not found.");
 			}
 
-			ev.Status = newStatus;
+			var status = await _db.EventStatuses.FirstOrDefaultAsync(s => s.Id == newStatusId);
+			if (status == null)
+			{
+				return ServiceResult.Fail("Status not found.");
+			}
 
-			if (newStatus != "Flagged")
+			ev.EventStatusId = newStatusId;
+
+			if (status.Name != "Flagged")
 			{
 				ev.AdminNote = null;
 			}
 
 			await _db.SaveChangesAsync();
 
-			var label = newStatus == "PendingReview" ? "Pending Review" : newStatus;
-			return ServiceResult.Ok($"Event \"{ev.Title}\" updated to {label}.");
+			return ServiceResult.Ok($"Event \"{ev.Title}\" updated to {status.Name}.");
+		}
+
+		private async Task<int> GetRequiredStatusIdAsync(string statusName)
+		{
+			var statusId = await _db.EventStatuses
+				.Where(s => s.Name == statusName)
+				.Select(s => s.Id)
+				.FirstOrDefaultAsync();
+
+			if (statusId == 0)
+			{
+				throw new InvalidOperationException($"Event status '{statusName}' was not found.");
+			}
+
+			return statusId;
 		}
 	}
 }

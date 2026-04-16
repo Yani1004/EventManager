@@ -5,6 +5,7 @@
 @using System.Security.Claims
 @using EventManager.Models
 @using EventManager.Services.Interfaces
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Radzen
 @using Radzen.Blazor
@@ -87,7 +88,7 @@
                             <RadzenStack Gap="0.15rem">
                                 <RadzenText TextStyle="TextStyle.Caption" class="info-label">Category</RadzenText>
                                 <RadzenText TextStyle="TextStyle.Body1" class="info-value">
-                                    @eventItem.Category
+                                    @eventItem.EventCategory.Name
                                 </RadzenText>
                             </RadzenStack>
                         </RadzenStack>

@@ -24,14 +24,20 @@ namespace EventManager.Services
 			var localDateTime = eventDateOnly.ToDateTime(selectedTime);
 			var utcDateTime = DateTime.SpecifyKind(localDateTime, DateTimeKind.Local).ToUniversalTime();
 
+			var pendingReviewStatusId = await _db.EventStatuses
+				.Where(s => s.Name == "PendingReview")
+				.Select(s => s.Id)
+				.FirstOrDefaultAsync();
+
+			if (pendingReviewStatusId == 0)
+			{
+				return ServiceResult.Fail("Pending review status not found.");
+			}
+
 			eventModel.Date = utcDateTime;
 			eventModel.CreatedAt = DateTime.UtcNow;
 			eventModel.CreatorId = userId;
-
-			if (string.IsNullOrWhiteSpace(eventModel.Status))
-			{
-				eventModel.Status = "PendingReview";
-			}
+			eventModel.EventStatusId = pendingReviewStatusId;
 
 			if (string.IsNullOrWhiteSpace(eventModel.AdminNote))
 			{
@@ -47,12 +53,16 @@ namespace EventManager.Services
 		public async Task<Event?> GetEventByIdAsync(int eventId)
 		{
 			return await _db.Events
+				.Include(e => e.EventCategory)
+				.Include(e => e.EventStatus)
 				.FirstOrDefaultAsync(e => e.Id == eventId);
 		}
 
 		public async Task<Event?> GetOwnedEventByIdAsync(int eventId, string userId)
 		{
 			return await _db.Events
+				.Include(e => e.EventCategory)
+				.Include(e => e.EventStatus)
 				.FirstOrDefaultAsync(e => e.Id == eventId && e.CreatorId == userId);
 		}
 
@@ -65,13 +75,15 @@ namespace EventManager.Services
 				{
 					Id = e.Id,
 					Title = e.Title,
-					Category = e.Category,
+					CategoryId = e.EventCategoryId,
+					CategoryName = e.EventCategory.Name,
 					Location = e.Location,
 					Date = e.Date,
 					Capacity = e.Capacity,
 					Price = e.Price,
 					ImageUrl = e.ImageUrl,
-					Status = e.Status,
+					StatusId = e.EventStatusId,
+					StatusName = e.EventStatus.Name,
 					RegisteredCount = e.Registrations.Count
 				})
 				.ToListAsync();
@@ -80,7 +92,9 @@ namespace EventManager.Services
 		public async Task<List<Event>> GetActiveEventsAsync()
 		{
 			return await _db.Events
-				.Where(e => e.Status == "Active")
+				.Include(e => e.EventCategory)
+				.Include(e => e.EventStatus)
+				.Where(e => e.EventStatus.Name == "Active")
 				.OrderBy(e => e.Date)
 				.ToListAsync();
 		}
@@ -88,6 +102,7 @@ namespace EventManager.Services
 		public async Task<ServiceResult> UpdateEventAsync(Event eventModel, DateOnly eventDateOnly, TimeOnly selectedTime, string userId)
 		{
 			var existingEvent = await _db.Events
+				.Include(e => e.EventStatus)
 				.FirstOrDefaultAsync(e => e.Id == eventModel.Id && e.CreatorId == userId);
 
 			if (existingEvent == null)
@@ -105,11 +120,21 @@ namespace EventManager.Services
 			existingEvent.Capacity = eventModel.Capacity;
 			existingEvent.Price = eventModel.Price;
 			existingEvent.ImageUrl = eventModel.ImageUrl;
-			existingEvent.Category = eventModel.Category;
+			existingEvent.EventCategoryId = eventModel.EventCategoryId;
 
-			if (existingEvent.Status == "Flagged")
+			if (existingEvent.EventStatus.Name == "Flagged")
 			{
-				existingEvent.Status = "PendingReview";
+				var pendingReviewStatusId = await _db.EventStatuses
+					.Where(s => s.Name == "PendingReview")
+					.Select(s => s.Id)
+					.FirstOrDefaultAsync();
+
+				if (pendingReviewStatusId == 0)
+				{
+					return ServiceResult.Fail("Pending review status not found.");
+				}
+
+				existingEvent.EventStatusId = pendingReviewStatusId;
 			}
 
 			await _db.SaveChangesAsync();

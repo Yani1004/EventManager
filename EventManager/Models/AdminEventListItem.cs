@@ -7,8 +7,13 @@
 		public string? Description { get; set; }
 		public DateTime Date { get; set; }
 		public string Location { get; set; } = string.Empty;
-		public string Category { get; set; } = string.Empty;
-		public string Status { get; set; } = string.Empty;
+
+		public int CategoryId { get; set; }
+		public string CategoryName { get; set; } = string.Empty;
+
+		public int StatusId { get; set; }
+		public string StatusName { get; set; } = string.Empty;
+
 		public string? AdminNote { get; set; }
 		public string CreatorId { get; set; } = string.Empty;
 		public string CreatorName { get; set; } = "Unknown";

@@ -36,6 +36,7 @@
                 <RadzenButton Text="Create Event"
                               Icon="add_circle"
                               Size="ButtonSize.Large"
+                              class="create-btn"
                               Click='@(() => NavigationManager.NavigateTo("/events/create"))' />
             </RadzenStack>
         </RadzenCard>
@@ -68,6 +69,7 @@
                     <RadzenButton Text="Create My First Event"
                                   Icon="add"
                                   Size="ButtonSize.Medium"
+                                  class="create-btn"
                                   Click='@(() => NavigationManager.NavigateTo("/events/create"))' />
                 </RadzenStack>
             </RadzenCard>
@@ -92,7 +94,7 @@
                                     </RadzenText>
 
                                     <RadzenText TextStyle="TextStyle.Caption" class="muted-text text-wrap">
-                                        @ev.Category
+                                        @ev.CategoryName
                                     </RadzenText>
 
                                     <RadzenText TextStyle="TextStyle.Caption" class="muted-text text-wrap">
@@ -128,8 +130,8 @@
                         <RadzenDataGridColumn TItem="MyEventListItem" Title="Status">
                             <Template Context="ev">
                                 <RadzenStack Gap="0.5rem">
-                                    <RadzenBadge Text="@GetStatusLabel(ev.Status)"
-                                                 class="@GetStatusBadgeClass(ev.Status)" />
+                                    <RadzenBadge Text="@ev.StatusName"
+                                                 class="@GetStatusBadgeClass(ev.StatusName)" />
                                 </RadzenStack>
                             </Template>
                         </RadzenDataGridColumn>
@@ -179,6 +181,9 @@
 </div>
 
 <style>
+    .create-btn{
+        border-radius:14px;
+    }
     .my-events-page {
         padding: 1.5rem;
     }
@@ -375,11 +380,5 @@
         "PendingReview" => "status-pending",
         "Hidden" => "status-hidden",
         _ => "status-default"
-    };
-
-    private string GetStatusLabel(string status) => status switch
-    {
-        "PendingReview" => "Pending Review",
-        _ => status
     };
 }

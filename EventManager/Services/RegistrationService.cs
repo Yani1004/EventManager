@@ -25,19 +25,24 @@ namespace EventManager.Services
 		public async Task<Registration?> GetUserRegistrationAsync(int eventId, string userId)
 		{
 			return await _db.Registrations
+				.Include(r => r.Ticket)
+				.Include(r => r.Event)
+					.ThenInclude(e => e.EventStatus)
 				.FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId);
 		}
 
-		public async Task<ServiceResult> RegisterForEventAsync(int eventId, string userId)
+		public async Task<ServiceResult> CompleteRegistrationAsync(int eventId, string userId)
 		{
-			var eventItem = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+			var eventItem = await _db.Events
+				.Include(e => e.EventStatus)
+				.FirstOrDefaultAsync(e => e.Id == eventId);
 
 			if (eventItem == null)
 			{
 				return ServiceResult.Fail("Event not found.");
 			}
 
-			if (eventItem.Status != "Active")
+			if (eventItem.EventStatus.Name != "Active")
 			{
 				return ServiceResult.Fail("This event is currently not available for registration.");
 			}
@@ -57,17 +62,41 @@ namespace EventManager.Services
 				return ServiceResult.Fail("This event is already full.");
 			}
 
+			var registeredStatusId = await _db.RegistrationStatuses
+				.Where(s => s.Name == "Registered")
+				.Select(s => s.Id)
+				.FirstOrDefaultAsync();
+
+			if (registeredStatusId == 0)
+			{
+				return ServiceResult.Fail("Registration status not found.");
+			}
+
 			var registration = new Registration
 			{
 				EventId = eventId,
 				UserId = userId,
-				RegisteredAt = DateTime.UtcNow
+				RegisteredAt = DateTime.UtcNow,
+				RegistrationStatusId = registeredStatusId
 			};
 
 			_db.Registrations.Add(registration);
 			await _db.SaveChangesAsync();
 
-			return ServiceResult.Ok("You successfully registered for the event.");
+			var ticket = new Ticket
+			{
+				RegistrationId = registration.Id,
+				TicketNumber = GenerateTicketNumber(),
+				IssuedAt = DateTime.UtcNow,
+				VerificationCode = GenerateVerificationCode()
+			};
+
+			_db.Tickets.Add(ticket);
+			await _db.SaveChangesAsync();
+
+			return ServiceResult.Ok(eventItem.Price > 0
+				? "Payment successful. Your ticket is confirmed."
+				: "Registration confirmed. Your ticket is ready.");
 		}
 
 		public async Task<ServiceResult> CancelRegistrationAsync(int registrationId, string userId)
@@ -120,6 +149,16 @@ namespace EventManager.Services
 			}
 
 			return result;
+		}
+
+		private static string GenerateTicketNumber()
+		{
+			return $"TKT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..26];
+		}
+
+		private static string GenerateVerificationCode()
+		{
+			return Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 		}
 	}
 }

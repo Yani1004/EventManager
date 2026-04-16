@@ -1,12 +1,15 @@
 ﻿@page "/events"
 @rendermode InteractiveServer
 
+@using EventManager.Data
 @using EventManager.Models
 @using EventManager.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 
 @inject IEventService EventService
+@inject ApplicationDbContext Db
 @inject NavigationManager NavigationManager
 
 <PageTitle>Events</PageTitle>
@@ -84,8 +87,10 @@
                         <RadzenColumn Size="12" SizeMD="6" SizeXL="3">
                             <RadzenStack Gap="0.35rem">
                                 <RadzenText TextStyle="TextStyle.Body2" class="field-label">Category</RadzenText>
-                                <RadzenDropDown @bind-Value="selectedCategory"
+                                <RadzenDropDown @bind-Value="selectedCategoryId"
                                                 Data="@categories"
+                                                TextProperty="Name"
+                                                ValueProperty="Id"
                                                 AllowClear="true"
                                                 Placeholder="All Categories"
                                                 Style="width: 100%;"
@@ -150,10 +155,10 @@
                          Wrap="FlexWrap.Wrap"
                          Gap="0.65rem"
                          class="active-filters">
-                @if (!string.IsNullOrWhiteSpace(selectedCategory))
+                @if (selectedCategoryId.HasValue)
                 {
                     <div class="filter-chip">
-                        <span>Category: @selectedCategory</span>
+                        <span>Category: @GetSelectedCategoryName()</span>
                         <RadzenButton Icon="close"
                                       Size="ButtonSize.Small"
                                       Variant="Variant.Text"
@@ -281,7 +286,7 @@
                                              alt="@ev.Title"
                                              class="event-image" />
 
-                                        <RadzenBadge Text="@ev.Category"
+                                        <RadzenBadge Text="@ev.EventCategory.Name"
                                                      class="category-badge" />
                                     </div>
 
@@ -382,7 +387,9 @@
         box-shadow: 0 1.125rem 2.8125rem rgba(15, 23, 42, 0.08);
         background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
     }
-
+    .radzen-input{
+        border-radius:14px;
+    }
     .page-header-card {
         padding: 0.5rem;
     }
@@ -410,6 +417,7 @@
 
     .filters-toggle-button {
         min-width: 9rem;
+        border-radius:14px;
     }
 
     .field-label,
@@ -605,27 +613,16 @@
 
 @code {
     private List<Event>? events;
+    private List<EventCategory> categories = new();
 
     private bool showFilters = false;
 
     private string selectedSort = "date_asc";
-    private string selectedCategory = string.Empty;
+    private int? selectedCategoryId;
     private string locationFilter = string.Empty;
     private decimal? minPrice;
     private decimal? maxPrice;
     private bool freeOnly = false;
-
-    private readonly List<string> categories = new()
-    {
-        "Conference",
-        "Workshop",
-        "Concert",
-        "Sports",
-        "Networking",
-        "Festival",
-        "Seminar",
-        "Other"
-    };
 
     private readonly List<SortOption> sortOptions = new()
     {
@@ -636,7 +633,7 @@
     };
 
     private bool HasActiveFilters =>
-        !string.IsNullOrWhiteSpace(selectedCategory) ||
+        selectedCategoryId.HasValue ||
         !string.IsNullOrWhiteSpace(locationFilter) ||
         minPrice.HasValue ||
         maxPrice.HasValue ||
@@ -648,9 +645,9 @@
         {
             IEnumerable<Event> query = events ?? Enumerable.Empty<Event>();
 
-            if (!string.IsNullOrWhiteSpace(selectedCategory))
+            if (selectedCategoryId.HasValue)
             {
-                query = query.Where(e => e.Category == selectedCategory);
+                query = query.Where(e => e.EventCategoryId == selectedCategoryId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(locationFilter))
@@ -691,6 +688,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        categories = await Db.EventCategories.OrderBy(c => c.Name).ToListAsync();
         events = await EventService.GetActiveEventsAsync();
     }
 
@@ -701,7 +699,7 @@
 
     private void ClearFilters()
     {
-        selectedCategory = string.Empty;
+        selectedCategoryId = null;
         locationFilter = string.Empty;
         minPrice = null;
         maxPrice = null;
@@ -711,7 +709,7 @@
 
     private void ClearCategory()
     {
-        selectedCategory = string.Empty;
+        selectedCategoryId = null;
     }
 
     private void ClearLocation()
@@ -732,6 +730,11 @@
     private void ClearFreeOnly()
     {
         freeOnly = false;
+    }
+
+    private string GetSelectedCategoryName()
+    {
+        return categories.FirstOrDefault(c => c.Id == selectedCategoryId)?.Name ?? string.Empty;
     }
 
     private class SortOption

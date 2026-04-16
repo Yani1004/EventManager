@@ -1,0 +1,960 @@
+@page "/events/{Id:int}/payment"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Attendee")]
+
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+@using System.Security.Claims
+@using EventManager.Models
+@using EventManager.Services.Interfaces
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Radzen
+@using Radzen.Blazor
+
+@inject IEventService EventService
+@inject IRegistrationService RegistrationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Ticket Payment</PageTitle>
+
+<div class="payment-page">
+    <RadzenStack Gap="1.5rem" class="page-stack">
+        @if (isLoading)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" />
+                    <RadzenText TextStyle="TextStyle.Body1">Loading payment details...</RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else if (eventItem == null)
+        {
+            <RadzenCard class="state-card">
+                <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" class="state-stack">
+                    <RadzenIcon Icon="event_busy" class="state-icon danger-icon" />
+                    <RadzenText TextStyle="TextStyle.H5">Event not found</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="muted-text">
+                        The event could not be loaded for payment.
+                    </RadzenText>
+                    <RadzenButton Text="Back to Events"
+                                  Icon="arrow_back"
+                                  Variant="Variant.Outlined"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Click='@(() => NavigationManager.NavigateTo("/events"))' />
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <div class="payment-hero">
+                <div class="payment-hero-copy">
+                    <div class="hero-kicker">Secure checkout</div>
+                    <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="page-title">
+                        @(paymentCompleted ? "Ticket Confirmed" : "Complete Your Registration")
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" class="hero-text">
+                        @(paymentCompleted
+                            ? "Your registration is complete and your ticket has been issued."
+                            : "Review the event, finish payment, and lock in your seat with an instant ticket confirmation.")
+                    </RadzenText>
+                </div>
+
+                <div class="hero-trust-row">
+                    <div class="trust-pill">
+                        <RadzenIcon Icon="verified_user" />
+                        <span>Protected checkout</span>
+                    </div>
+                    <div class="trust-pill">
+                        <RadzenIcon Icon="confirmation_number" />
+                        <span>Instant ticket issue</span>
+                    </div>
+                </div>
+            </div>
+
+            <RadzenRow Gap="1.5rem" RowGap="1.5rem">
+                <RadzenColumn Size="12" SizeLG="5">
+                    <RadzenCard class="summary-card">
+                        <div class="summary-media">
+                            <img src="@(string.IsNullOrWhiteSpace(eventItem.ImageUrl) ? "https://via.placeholder.com/720x360?text=Event+Ticket" : eventItem.ImageUrl)"
+                                 alt="@eventItem.Title"
+                                 class="event-image" />
+                            <div class="summary-media-overlay"></div>
+                            <div class="summary-badge">@eventItem.EventCategory.Name</div>
+                        </div>
+
+                        <RadzenStack Gap="1rem">
+                            <RadzenStack Gap="0.4rem">
+                                <RadzenText TextStyle="TextStyle.H5" class="event-title">@eventItem.Title</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" class="muted-text">@eventItem.Location</RadzenText>
+                            </RadzenStack>
+
+                            <div class="ticket-preview">
+                                <div class="ticket-preview-top">
+                                    <span>Admission</span>
+                                    <strong>@(eventItem.Price > 0 ? "General ticket" : "Free pass")</strong>
+                                </div>
+                                <div class="ticket-preview-bottom">
+                                    <div>
+                                        <span>Date</span>
+                                        <strong>@eventItem.Date.ToLocalTime().ToString("dd.MM.yyyy")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Time</span>
+                                        <strong>@eventItem.Date.ToLocalTime().ToString("HH:mm")</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <RadzenStack Gap="0.75rem" class="summary-grid">
+                                <div class="summary-row">
+                                    <span>Event date</span>
+                                    <strong>@eventItem.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Category</span>
+                                    <strong>@eventItem.EventCategory.Name</strong>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Processing</span>
+                                    <strong>Included</strong>
+                                </div>
+                                <div class="summary-row total-row">
+                                    <span>Total due</span>
+                                    <strong>@GetPriceLabel(eventItem.Price)</strong>
+                                </div>
+                            </RadzenStack>
+
+                            <div class="security-note">
+                                <RadzenIcon Icon="lock" />
+                                <span>Payments are handled in a secure checkout flow and your ticket is issued immediately after confirmation.</span>
+                            </div>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Size="12" SizeLG="7">
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <RadzenAlert AlertStyle="@messageStyle"
+                                     Variant="Variant.Flat"
+                                     Shade="Shade.Light"
+                                     class="feedback-alert">
+                            @message
+                        </RadzenAlert>
+                    }
+
+                    @if (paymentCompleted && registration is not null)
+                    {
+                        <RadzenCard class="confirmation-card">
+                            <RadzenStack Gap="1rem">
+                                <div class="confirmation-badge">
+                                    <RadzenIcon Icon="verified" class="confirmation-icon" />
+                                </div>
+
+                                <RadzenText TextStyle="TextStyle.H5" class="confirmation-title">
+                                    Payment confirmed
+                                </RadzenText>
+
+                                <RadzenText TextStyle="TextStyle.Body1" class="muted-text">
+                                    Keep these details as your ticket confirmation.
+                                </RadzenText>
+
+                                <RadzenStack Gap="0.75rem" class="summary-grid">
+                                    <div class="summary-row">
+                                        <span>Ticket Number</span>
+                                        <strong>@registration.Ticket?.TicketNumber</strong>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Verification Code</span>
+                                        <strong>@registration.Ticket?.VerificationCode</strong>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Registered On</span>
+                                        <strong>@registration.RegisteredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
+                                    </div>
+                                </RadzenStack>
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" Wrap="FlexWrap.Wrap">
+                                    <RadzenButton Text="View My Registrations"
+                                                  Icon="confirmation_number"
+                                                  class="full-button"
+                                                  Click='@(() => NavigationManager.NavigateTo("/my-registrations"))' />
+                                    <RadzenButton Text="Back to Event"
+                                                  Icon="visibility"
+                                                  Variant="Variant.Outlined"
+                                                  ButtonStyle="ButtonStyle.Secondary"
+                                                  class="full-button"
+                                                  Click='@(() => NavigationManager.NavigateTo($"/events/{eventItem.Id}"))' />
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenCard>
+                    }
+                    else
+                    {
+                        <RadzenCard class="payment-form-card">
+                            <RadzenTemplateForm TItem="PaymentInputModel"
+                                                Data="@paymentModel"
+                                                Submit="@HandlePaymentAsync">
+                                <RadzenStack Gap="1rem">
+                                    <div class="checkout-header">
+                                        <div>
+                                            <RadzenText TextStyle="TextStyle.H5" class="section-title">
+                                                @(eventItem.Price > 0 ? "Payment Details" : "Free Ticket Confirmation")
+                                            </RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Body2" class="muted-text">
+                                                @(eventItem.Price > 0
+                                                    ? "Enter your card details to complete the registration."
+                                                    : "Confirm the attendee details below to issue your free ticket.")
+                                            </RadzenText>
+                                        </div>
+
+                                        @if (eventItem.Price > 0)
+                                        {
+                                            <div class="card-brands">
+                                                <span>VISA</span>
+                                                <span>MC</span>
+                                                <span>AMEX</span>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    @if (eventItem.Price > 0)
+                                    {
+                                        <div class="payment-method-panel">
+                                            <div class="payment-method-active">
+                                                <div class="payment-method-copy">
+                                                    <RadzenIcon Icon="credit_card" class="method-icon" />
+                                                    <div>
+                                                        <strong>Credit or debit card</strong>
+                                                        <span>Pay securely and receive your ticket instantly.</span>
+                                                    </div>
+                                                </div>
+                                                <div class="payment-method-check">
+                                                    <RadzenIcon Icon="check_circle" />
+                                                </div>
+                                            </div>
+
+                                            <div class="card-visual">
+                                                <div class="card-chip"></div>
+                                                <div class="card-brand-mark">EVENT PASS</div>
+                                                <div class="card-number-preview">@GetCardPreview(paymentModel.CardNumber)</div>
+                                                <div class="card-meta">
+                                                    <div>
+                                                        <span>Cardholder</span>
+                                                        <strong>@(string.IsNullOrWhiteSpace(paymentModel.CardholderName) ? "Your Name" : paymentModel.CardholderName)</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span>Expires</span>
+                                                        <strong>@(string.IsNullOrWhiteSpace(paymentModel.ExpiryDate) ? "MM/YY" : paymentModel.ExpiryDate)</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <RadzenRow Gap="1rem" RowGap="1rem">
+                                                <RadzenColumn Size="12">
+                                                    <RadzenFormField Text="Cardholder Name" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                        <RadzenTextBox Name="CardholderName"
+                                                                       Placeholder="Name as shown on card"
+                                                                       @bind-Value="paymentModel.CardholderName"
+                                                                       class="w-100" />
+                                                    </RadzenFormField>
+                                                    <RadzenRequiredValidator Component="CardholderName"
+                                                                             Text="Cardholder name is required."
+                                                                             Popup="false" />
+                                                </RadzenColumn>
+
+                                                <RadzenColumn Size="12">
+                                                    <RadzenFormField Text="Card Number" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                        <div class="field-with-icon">
+                                                            <RadzenIcon Icon="credit_card" />
+                                                            <RadzenMask Name="CardNumber"
+                                                                        Mask="0000 0000 0000 0000"
+                                                                        Placeholder="1234 5678 9012 3456"
+                                                                        @bind-Value="paymentModel.CardNumber"
+                                                                        class="w-100 payment-mask" />
+                                                        </div>
+                                                    </RadzenFormField>
+                                                    <RadzenRequiredValidator Component="CardNumber"
+                                                                             Text="Card number is required."
+                                                                             Popup="false" />
+                                                </RadzenColumn>
+
+                                                <RadzenColumn Size="8">
+                                                    <RadzenFormField Text="Expiry" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                        <RadzenMask Name="ExpiryDate"
+                                                                    Mask="00/00"
+                                                                    Placeholder="MM/YY"
+                                                                    @bind-Value="paymentModel.ExpiryDate"
+                                                                    class="w-100 payment-mask" />
+                                                    </RadzenFormField>
+                                                    <RadzenRequiredValidator Component="ExpiryDate"
+                                                                             Text="Expiry date is required."
+                                                                             Popup="false" />
+                                                </RadzenColumn>
+
+                                                <RadzenColumn Size="4">
+                                                    <RadzenFormField Text="CVV" Variant="Variant.Outlined" class="w-100 checkout-field">
+                                                        <div class="field-with-icon">
+                                                            <RadzenMask Name="Cvv"
+                                                                        Mask="000"
+                                                                        Placeholder="123"
+                                                                        @bind-Value="paymentModel.Cvv"
+                                                                        class="w-100 payment-mask" />
+                                                            <RadzenIcon Icon="info" title="3-digit code on the back of your card" />
+                                                        </div>
+                                                    </RadzenFormField>
+                                                    <RadzenRequiredValidator Component="Cvv"
+                                                                             Text="CVV is required."
+                                                                             Popup="false" />
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <RadzenAlert AlertStyle="AlertStyle.Info"
+                                                     Variant="Variant.Flat"
+                                                     Shade="Shade.Light">
+                                            This event is free. Confirm the registration to issue your ticket.
+                                        </RadzenAlert>
+                                    }
+
+                                    <div class="terms-row">
+                                        <RadzenCheckBox Name="AcceptTerms"
+                                                        @bind-Value="paymentModel.AcceptTerms"
+                                                        TValue="bool" />
+                                        <label for="AcceptTerms" class="checkbox-label">
+                                            I confirm that the ticket information is correct and I want to complete this registration.
+                                        </label>
+                                    </div>
+                                    <RadzenRequiredValidator Component="AcceptTerms"
+                                                             Text="Please confirm before continuing."
+                                                             DefaultValue="false"
+                                                             Popup="false" />
+
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" Wrap="FlexWrap.Wrap">
+                                        <RadzenButton Text="@(isSubmitting ? "Processing..." : (eventItem.Price > 0 ? $"Pay {GetPriceLabel(eventItem.Price)}" : "Confirm Ticket"))"
+                                                      Icon="lock"
+                                                      ButtonType="ButtonType.Submit"
+                                                      Disabled="@isSubmitting"
+                                                      class="full-button" />
+                                        <RadzenButton Text="Cancel"
+                                                      Icon="arrow_back"
+                                                      Variant="Variant.Outlined"
+                                                      ButtonStyle="ButtonStyle.Secondary"
+                                                      class="full-button"
+                                                      Click='@(() => NavigationManager.NavigateTo($"/events/{eventItem.Id}"))' />
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenTemplateForm>
+                        </RadzenCard>
+                    }
+                </RadzenColumn>
+            </RadzenRow>
+        }
+    </RadzenStack>
+</div>
+
+<style>
+    .payment-page {
+        padding: 1.5rem;
+    }
+
+    .page-stack {
+        max-width: 80rem;
+        margin: 0 auto;
+    }
+
+    .summary-card,
+    .payment-form-card,
+    .confirmation-card,
+    .state-card {
+        border: none;
+        border-radius: 1.5rem;
+        box-shadow: 0 1.125rem 2.8125rem rgba(15, 23, 42, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    }
+
+    .summary-card,
+    .payment-form-card,
+    .confirmation-card,
+    .state-card {
+        padding: 1.5rem;
+    }
+
+    .page-title,
+    .event-title,
+    .section-title,
+    .confirmation-title {
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .payment-hero {
+        padding: 1.75rem;
+        border-radius: 1.75rem;
+        background:
+            radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 32%),
+            linear-gradient(135deg, #f8fbff 0%, #eef5ff 48%, #f8fafc 100%);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+        background: rgba(37, 99, 235, 0.10);
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-text {
+        color: #475569;
+        max-width: 42rem;
+    }
+
+    .hero-trust-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .trust-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        color: #0f172a;
+        font-weight: 600;
+        box-shadow: 0 0.625rem 1.5rem rgba(15, 23, 42, 0.05);
+    }
+
+    .muted-text {
+        color: #64748b;
+    }
+
+    .summary-media {
+        position: relative;
+        margin: -1.5rem -1.5rem 1.25rem -1.5rem;
+    }
+
+    .event-image {
+        width: 100%;
+        height: 16rem;
+        object-fit: cover;
+        border-radius: 1.5rem 1.5rem 0 0;
+        display: block;
+    }
+
+    .summary-media-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.55));
+        border-radius: 1.5rem 1.5rem 0 0;
+    }
+
+    .summary-badge {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        padding: 0.45rem 0.85rem;
+        border-radius: 999rem;
+        background: rgba(255,255,255,0.94);
+        color: #0f172a;
+        font-weight: 700;
+        box-shadow: 0 0.625rem 1.5rem rgba(15, 23, 42, 0.14);
+    }
+
+    .ticket-preview {
+        padding: 1rem;
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+        color: #ffffff;
+        box-shadow: 0 1rem 2.25rem rgba(30, 58, 138, 0.20);
+    }
+
+    .ticket-preview-top,
+    .ticket-preview-bottom {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .ticket-preview-top span,
+    .ticket-preview-bottom span {
+        display: block;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .ticket-preview-bottom {
+        padding-top: 0.85rem;
+        margin-top: 0.85rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .summary-grid {
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        padding-top: 1rem;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        color: #475569;
+    }
+
+    .summary-row strong {
+        color: #0f172a;
+    }
+
+    .security-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.9rem 1rem;
+        border-radius: 1rem;
+        background: rgba(37, 99, 235, 0.07);
+        color: #334155;
+        line-height: 1.55;
+    }
+
+    .security-note .rz-icon {
+        color: #2563eb;
+        margin-top: 0.1rem;
+    }
+
+    .total-row {
+        padding-top: 0.25rem;
+        font-size: 1.05rem;
+    }
+
+    .feedback-alert {
+        margin-bottom: 1rem;
+        border-radius: 1rem;
+    }
+
+    .full-button {
+        flex: 1 1 14rem;
+        justify-content: center;
+    }
+
+    .checkout-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .card-brands {
+        display: inline-flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .card-brands span {
+        padding: 0.45rem 0.65rem;
+        border-radius: 0.8rem;
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        color: #334155;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .payment-method-panel {
+        padding: 1rem;
+        border-radius: 1.25rem;
+        background: linear-gradient(180deg, rgba(248,250,252,0.95) 0%, rgba(255,255,255,0.98) 100%);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .payment-method-active {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.95rem 1rem;
+        border-radius: 1rem;
+        background: rgba(37, 99, 235, 0.07);
+        border: 1px solid rgba(37, 99, 235, 0.14);
+        margin-bottom: 1rem;
+    }
+
+    .payment-method-copy {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    .payment-method-copy strong,
+    .payment-method-copy span {
+        display: block;
+    }
+
+    .payment-method-copy span {
+        color: #64748b;
+        font-size: 0.92rem;
+    }
+
+    .method-icon,
+    .payment-method-check .rz-icon {
+        font-size: 1.4rem;
+        color: #2563eb;
+    }
+
+    .card-visual {
+        position: relative;
+        overflow: hidden;
+        padding: 1.15rem;
+        border-radius: 1.35rem;
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 26%),
+            linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #2563eb 100%);
+        color: #ffffff;
+        margin-bottom: 1rem;
+        box-shadow: 0 1rem 2.6rem rgba(37, 99, 235, 0.18);
+    }
+
+    .card-chip {
+        width: 2.7rem;
+        height: 2rem;
+        border-radius: 0.45rem;
+        background: linear-gradient(135deg, #f8d87c 0%, #f4bf38 100%);
+        margin-bottom: 1.4rem;
+    }
+
+    .card-brand-mark {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        font-weight: 800;
+        color: rgba(255,255,255,0.84);
+    }
+
+    .card-number-preview {
+        font-size: 1.2rem;
+        letter-spacing: 0.14em;
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+    }
+
+    .card-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .card-meta span {
+        display: block;
+        color: rgba(255,255,255,0.72);
+        font-size: 0.78rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .checkout-field {
+        border-radius: 1rem;
+    }
+
+    .field-with-icon {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        width: 100%;
+    }
+
+    .field-with-icon .rz-icon {
+        color: #64748b;
+    }
+
+    .payment-mask {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        padding-left: 0 !important;
+    }
+
+    .confirmation-badge {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(34, 197, 94, 0.12);
+    }
+
+    .confirmation-icon {
+        font-size: 1.8rem;
+        color: #16a34a;
+    }
+
+    .state-stack {
+        padding: 1rem 0;
+    }
+
+    .state-icon {
+        font-size: 2rem;
+    }
+
+    .danger-icon {
+        color: #dc2626;
+    }
+
+    .checkbox-label {
+        color: #475569;
+        line-height: 1.5;
+    }
+
+    .terms-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    @@media (max-width: 75rem) {
+        .payment-page {
+            padding: 1rem;
+        }
+    }
+
+    @@media (max-width: 40rem) {
+        .event-image {
+            height: 12rem;
+        }
+
+        .payment-hero,
+        .payment-method-active,
+        .ticket-preview-top,
+        .ticket-preview-bottom,
+        .card-meta,
+        .summary-row {
+            display: block;
+        }
+
+        .summary-row strong,
+        .ticket-preview-bottom strong,
+        .card-meta strong {
+            display: block;
+            margin-top: 0.25rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Event? eventItem;
+    private Registration? registration;
+    private PaymentInputModel paymentModel = new();
+
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool paymentCompleted;
+
+    private string currentUserId = string.Empty;
+    private string message = string.Empty;
+    private AlertStyle messageStyle = AlertStyle.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        eventItem = await EventService.GetEventByIdAsync(Id);
+
+        if (eventItem == null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        if (eventItem.EventStatus.Name != "Active")
+        {
+            message = "This event is not available for registration.";
+            messageStyle = AlertStyle.Warning;
+            isLoading = false;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentUserId))
+        {
+            registration = await RegistrationService.GetUserRegistrationAsync(Id, currentUserId);
+        }
+
+        if (registration is not null)
+        {
+            paymentCompleted = true;
+            message = "You are already registered for this event.";
+            messageStyle = AlertStyle.Success;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandlePaymentAsync()
+    {
+        if (eventItem == null || string.IsNullOrWhiteSpace(currentUserId))
+        {
+            message = "Could not identify the current user.";
+            messageStyle = AlertStyle.Danger;
+            return;
+        }
+
+        isSubmitting = true;
+        message = string.Empty;
+
+        try
+        {
+            if (eventItem.Price > 0 && !IsPaymentInputValid())
+            {
+                return;
+            }
+
+            var result = await RegistrationService.CompleteRegistrationAsync(eventItem.Id, currentUserId);
+
+            if (!result.Success)
+            {
+                message = result.Message;
+                messageStyle = AlertStyle.Warning;
+                return;
+            }
+
+            registration = await RegistrationService.GetUserRegistrationAsync(eventItem.Id, currentUserId);
+            paymentCompleted = registration is not null;
+            message = result.Message;
+            messageStyle = AlertStyle.Success;
+        }
+        catch
+        {
+            message = "Something went wrong while processing the payment.";
+            messageStyle = AlertStyle.Danger;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private bool IsPaymentInputValid()
+    {
+        if (string.IsNullOrWhiteSpace(paymentModel.CardholderName))
+        {
+            message = "Please enter the cardholder name.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        var digitsOnlyCardNumber = new string((paymentModel.CardNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (digitsOnlyCardNumber.Length != 16)
+        {
+            message = "Please enter a valid 16-digit card number.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        var digitsOnlyCvv = new string((paymentModel.Cvv ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (digitsOnlyCvv.Length != 3)
+        {
+            message = "Please enter a valid 3-digit CVV.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        if (!TryParseExpiry(paymentModel.ExpiryDate, out var expiryDate) || expiryDate < DateTime.UtcNow.Date)
+        {
+            message = "Please enter a valid future expiry date.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        if (!paymentModel.AcceptTerms)
+        {
+            message = "Please confirm the registration before continuing.";
+            messageStyle = AlertStyle.Warning;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseExpiry(string? expiryDate, out DateTime parsedDate)
+    {
+        parsedDate = default;
+
+        if (string.IsNullOrWhiteSpace(expiryDate))
+        {
+            return false;
+        }
+
+        if (!DateTime.TryParseExact($"01/{expiryDate}", "dd/MM/yy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startOfMonth))
+        {
+            return false;
+        }
+
+        parsedDate = new DateTime(startOfMonth.Year, startOfMonth.Month, DateTime.DaysInMonth(startOfMonth.Year, startOfMonth.Month), 23, 59, 59, DateTimeKind.Utc);
+        return true;
+    }
+
+    private static string GetPriceLabel(decimal price) => price == 0 ? "Free" : $"{price:F2} lv.";
+
+    private static string GetCardPreview(string? cardNumber)
+    {
+        var digits = new string((cardNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+
+        if (digits.Length == 16)
+        {
+            return string.Join(" ", Enumerable.Range(0, 4).Select(index => digits.Substring(index * 4, 4)));
+        }
+
+        return "1234 5678 9012 3456";
+    }
+
+    private sealed class PaymentInputModel
+    {
+        [Required]
+        public string CardholderName { get; set; } = string.Empty;
+
+        [Required]
+        public string CardNumber { get; set; } = string.Empty;
+
+        [Required]
+        public string ExpiryDate { get; set; } = string.Empty;
+
+        [Required]
+        public string Cvv { get; set; } = string.Empty;
+
+        public bool AcceptTerms { get; set; }
+    }
+}
